@@ -1,0 +1,48 @@
+.rings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  justify-content: center;
+  padding: 20px 0 40px;
+}
+
+.allDone {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--success);
+  background: rgba(78, 203, 141, 0.1);
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(78, 203, 141, 0.2);
+}
+
+.streakReset {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--error);
+  text-align: center;
+  padding: 14px;
+  background: rgba(207, 102, 121, 0.08);
+  border-radius: var(--radius);
+  border: 1px solid rgba(207, 102, 121, 0.2);
+  animation: fade-in 0.3s ease;
+  margin-bottom: 16px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 60px 0;
+  color: var(--text-3);
+  font-size: 15px;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  opacity: 0.3;
+  display: block;
+  margin-bottom: 8px;
+}

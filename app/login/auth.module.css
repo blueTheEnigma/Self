@@ -1,0 +1,43 @@
+.container {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  animation: fade-in 0.4s ease;
+}
+
+.logo {
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--text-1);
+  text-align: center;
+}
+
+.tagline {
+  font-size: 14px;
+  color: var(--text-3);
+  text-align: center;
+  line-height: 1.5;
+  margin-top: -12px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.switch {
+  font-size: 13px;
+  color: var(--text-3);
+  text-align: center;
+}
+
+.link {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.link:hover { text-decoration: underline; }

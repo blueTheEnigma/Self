@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  pinHash      String   @default("")
+  theme        String   @default("midnight")
+  createdAt    DateTime @default(now())
+
+  goals               Goal[]
+  sentNudges          Nudge[]             @relation("SentNudges")
+  receivedNudges      Nudge[]             @relation("ReceivedNudges")
+  sentConnections     PartnerConnection[] @relation("SentConnections")
+  receivedConnections PartnerConnection[] @relation("ReceivedConnections")
+}
+
+model Goal {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         String    // "NAMED" | "UNNAMED"
+  title        String?   // Only for NAMED
+  color        String    // Hex color string
+  frequency    String    @default("DAILY") // "DAILY"|"WEEKDAYS"|"WEEKENDS"|"MON_WED_FRI"|"TUE_THU_SAT"
+  reminderTime String?   // "HH:MM" 24h format, null = no reminder
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+
+  checkIns     CheckIn[]
+}
+
+model CheckIn {
+  id      String   @id @default(cuid())
+  goalId  String
+  goal    Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  date    String   // ISO date string "YYYY-MM-DD"
+  status  String   // "DONE" | "MISSED"
+
+  @@unique([goalId, date])
+}
+
+model PartnerConnection {
+  id          String   @id @default(cuid())
+  requesterId String
+  responderId String?
+  requester   User     @relation("SentConnections", fields: [requesterId], references: [id], onDelete: Cascade)
+  responder   User?    @relation("ReceivedConnections", fields: [responderId], references: [id], onDelete: Cascade)
+  status      String   // "PENDING" | "APPROVED" | "REJECTED"
+  token       String   @unique @default(cuid())
+  createdAt   DateTime @default(now())
+}
+
+model Nudge {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  sender     User     @relation("SentNudges", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedNudges", fields: [receiverId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  read       Boolean  @default(false)
+}

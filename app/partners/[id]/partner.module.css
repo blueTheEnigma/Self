@@ -1,0 +1,86 @@
+.profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0 24px;
+}
+
+.avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  font-size: 28px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.nudgeWrap {
+  margin-bottom: 24px;
+}
+
+.nudgeBtn {
+  background: var(--nudge);
+  color: var(--bg);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 16px;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(240, 160, 80, 0.3);
+  transition: all 0.18s;
+}
+
+.nudgeBtn:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(240, 160, 80, 0.45);
+}
+
+.goalList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 20px;
+}
+
+.goalCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+}
+
+.goalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.goalTitle {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.streakLine {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
