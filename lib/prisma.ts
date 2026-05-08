@@ -11,7 +11,7 @@ if (typeof window === 'undefined') {
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 
 function createPrismaClient() {
-  const url = process.env.DATABASE_URL
+  const url = process.env.POSTGRES_URL
   console.log("[PRISMA DEBUG] URL present:", !!url)
   if (url) console.log("[PRISMA DEBUG] URL prefix:", url.substring(0, 15))
 
