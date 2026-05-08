@@ -12,8 +12,11 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 
 function createPrismaClient() {
   const url = process.env.DATABASE_URL
+  console.log("[PRISMA DEBUG] URL present:", !!url)
+  if (url) console.log("[PRISMA DEBUG] URL prefix:", url.substring(0, 15))
+
   if (!url) {
-    // During build time, if URL is missing, we still need to provide an object to avoid construction error
+    console.error("[PRISMA DEBUG] CRITICAL: DATABASE_URL is missing from process.env")
     return new PrismaClient({ log: ["error"] } as any)
   }
   const pool = new Pool({ connectionString: url })
