@@ -4,9 +4,6 @@ const nextConfig: NextConfig = {
   serverExternalPackages: [
     'bcryptjs',
     '@prisma/client',
-    '@prisma/adapter-neon',
-    '@neondatabase/serverless',
-    'ws',
   ],
 };
 
