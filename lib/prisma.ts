@@ -21,7 +21,7 @@ function createPrismaClient() {
 
   console.log("[PRISMA DEBUG] Creating client with URL length:", url.length)
   const pool = new Pool({ connectionString: url })
-  const adapter = new PrismaNeon(pool)
+  const adapter = new PrismaNeon(pool as any)
   
   return new PrismaClient({ adapter } as any)
 }
