@@ -6,32 +6,44 @@ import bcrypt from "bcryptjs"
 
 // POST /api/auth/register
 export async function POST(req: NextRequest) {
+  console.log("[REGISTRATION DEBUG] Start")
   const { name, email, password, token } = await req.json()
+  console.log("[REGISTRATION DEBUG] Parsed body for:", email)
 
-  if (!name || !email || !password)
-    return NextResponse.json({ error: "Missing fields" }, { status: 400 })
-  if (password.length < 8)
-    return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 })
+  if (!name || !email || !password) return NextResponse.json({ error: "Missing fields" }, { status: 400 })
+  
+  try {
+    console.log("[REGISTRATION DEBUG] Checking existing user...")
+    const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } })
+    console.log("[REGISTRATION DEBUG] Existing check done. Found:", !!existing)
+    
+    if (existing) return NextResponse.json({ error: "Email already in use" }, { status: 409 })
 
-  const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } })
-  if (existing)
-    return NextResponse.json({ error: "Email already in use" }, { status: 409 })
+    console.log("[REGISTRATION DEBUG] Hashing password...")
+    const passwordHash = await bcrypt.hash(password, 10)
+    console.log("[REGISTRATION DEBUG] Hashing done.")
 
-  const passwordHash = await bcrypt.hash(password, 10)
-  const user = await prisma.user.create({
-    data: { name, email: email.toLowerCase(), passwordHash },
-  })
+    console.log("[REGISTRATION DEBUG] Creating user in DB...")
+    const user = await prisma.user.create({
+      data: { name, email: email.toLowerCase(), passwordHash },
+    })
+    console.log("[REGISTRATION DEBUG] User created ID:", user.id)
 
-  // If registering via invite token, link the connection
-  if (token) {
-    const connection = await prisma.partnerConnection.findUnique({ where: { token } })
-    if (connection && !connection.responderId && connection.status === "PENDING") {
-      await prisma.partnerConnection.update({
-        where: { id: connection.id },
-        data: { responderId: user.id },
-      })
+    if (token) {
+      console.log("[REGISTRATION DEBUG] Processing token...")
+      const connection = await prisma.partnerConnection.findUnique({ where: { token } })
+      if (connection && !connection.responderId && connection.status === "PENDING") {
+        await prisma.partnerConnection.update({
+          where: { id: connection.id },
+          data: { responderId: user.id },
+        })
+      }
     }
-  }
 
-  return NextResponse.json({ ok: true })
+    console.log("[REGISTRATION DEBUG] Success")
+    return NextResponse.json({ ok: true })
+  } catch (err: any) {
+    console.error("[REGISTRATION DEBUG] FATAL ERROR:", err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
 }
