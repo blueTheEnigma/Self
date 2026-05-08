@@ -1,6 +1,10 @@
 import { PrismaClient } from "@prisma/client"
 import { PrismaNeon } from "@prisma/adapter-neon"
-import { Pool } from "@neondatabase/serverless"
+import { Pool, neonConfig } from "@neondatabase/serverless"
+import ws from "ws"
+
+// Required for Node.js runtime (Vercel serverless functions)
+neonConfig.webSocketConstructor = ws
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 
