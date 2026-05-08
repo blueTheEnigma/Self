@@ -24,8 +24,12 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const { pathname } = req.nextUrl
-        // Allow unauthenticated access to login/register
-        if (pathname.startsWith('/login') || pathname.startsWith('/register')) return true
+        // Allow unauthenticated access to login/register pages and registration API
+        if (
+          pathname.startsWith('/login') || 
+          pathname.startsWith('/register') || 
+          pathname.startsWith('/api/auth')
+        ) return true
         return !!token
       },
     },
