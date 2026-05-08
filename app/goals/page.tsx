@@ -23,7 +23,7 @@ export default function GoalsDashboard() {
     }
 
     if (status === 'authenticated') {
-      fetch('/api/v1/goals')
+      fetch('/api/goals')
         .then(res => res.json())
         .then(data => {
           if (data.goals) setGoals(data.goals);
