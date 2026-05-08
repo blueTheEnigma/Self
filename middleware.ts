@@ -28,7 +28,7 @@ export default withAuth(
         if (
           pathname.startsWith('/login') || 
           pathname.startsWith('/register') || 
-          pathname.startsWith('/api/auth')
+          pathname.startsWith('/api')
         ) return true
         return !!token
       },
