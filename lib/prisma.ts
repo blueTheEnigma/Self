@@ -11,17 +11,26 @@ if (typeof window === 'undefined') {
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 
 function createPrismaClient() {
-  const url = process.env.POSTGRES_URL
+  const url = process.env.POSTGRES_URL?.trim()
   console.log("[PRISMA DEBUG] URL present:", !!url)
-  if (url) console.log("[PRISMA DEBUG] URL prefix:", url.substring(0, 15))
+  if (url) {
+    console.log("[PRISMA DEBUG] URL prefix:", url.substring(0, 15))
+    console.log("[PRISMA DEBUG] URL length:", url.length)
+  }
 
   if (!url) {
-    console.error("[PRISMA DEBUG] CRITICAL: DATABASE_URL is missing from process.env")
+    console.error("[PRISMA DEBUG] CRITICAL: POSTGRES_URL is missing")
     return new PrismaClient({ log: ["error"] } as any)
   }
-  const pool = new Pool({ connectionString: url })
-  const adapter = new PrismaNeon(pool as any)
-  return new PrismaClient({ adapter } as any)
+  
+  try {
+    const pool = new Pool({ connectionString: url })
+    const adapter = new PrismaNeon(pool as any)
+    return new PrismaClient({ adapter } as any)
+  } catch (e: any) {
+    console.error("[PRISMA DEBUG] Pool/Adapter Error:", e.message)
+    return new PrismaClient({ log: ["error"] } as any)
+  }
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient()
