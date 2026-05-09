@@ -8,7 +8,7 @@ import styles from './PartnerProfile.module.css'
 
 interface Goal {
   id: string; type: string; title: string | null; color: string
-  frequency: string; checkIns: any[]
+  frequency: string; reminderTime: string | null; checkIns: any[]
 }
 interface PartnerProfile {
   id: string; name: string; xp: number; level: number
