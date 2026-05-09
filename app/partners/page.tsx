@@ -26,8 +26,10 @@ export default function Partners() {
   const generateLink = async () => {
     const res = await fetch('/api/partners', { method: 'POST' });
     const data = await res.json();
-    if (data.link) setInviteLink(data.link);
-    else alert(data.error);
+    if (data.token) {
+      const link = `${window.location.origin}/partners/invite?token=${data.token}`;
+      setInviteLink(link);
+    } else alert(data.error);
     fetchConnections();
   };
 
