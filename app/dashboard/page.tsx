@@ -83,7 +83,9 @@ export default function DashboardPage() {
 
   return (
     <div className="app-shell">
-      {showRecap && <RecapModal onClose={() => setShowRecap(false)} />}
+      {status === 'authenticated' && !loading && showRecap && (
+        <RecapModal onClose={() => setShowRecap(false)} />
+      )}
       <div className="page-header">
         <div>
           <h1 className="page-title">Today</h1>
