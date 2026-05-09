@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import { NavBar } from '@/components/NavBar'
 import { GoalRing } from '@/components/GoalRing'
 import { DailyStrip } from '@/components/DailyStrip'
@@ -15,6 +16,7 @@ interface Goal {
 interface UserProfile { name: string; xp: number; level: number }
 
 export default function DashboardPage() {
+  const { status } = useSession()
   const [goals, setGoals]       = useState<Goal[]>([])
   const [profile, setProfile]   = useState<UserProfile | null>(null)
   const [loading, setLoading]   = useState(true)
