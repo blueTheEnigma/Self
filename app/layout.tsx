@@ -4,8 +4,21 @@ import { Providers } from '@/components/Providers'
 import { NotificationCenter } from '@/components/NotificationCenter'
 
 export const metadata: Metadata = {
-  title: 'SELF.',
-  description: 'Private accountability for people who keep their word.',
+  title: 'SELF',
+  description: 'A serene, gamified accountability tracker to build high integrity habits.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    title: 'SELF',
+    statusBarStyle: 'black-translucent',
+  },
+}
+
+export const viewport = {
+  themeColor: '#080912',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
