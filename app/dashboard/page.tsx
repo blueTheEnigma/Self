@@ -31,7 +31,7 @@ export default function DashboardPage() {
     const res = await fetch('/api/checkin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ goalId, status }),
+      body: JSON.stringify({ goalId, status, date: todayStr }),
     })
     if (!res.ok) return
     const newCheckIn: CheckIn = await res.json()

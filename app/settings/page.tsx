@@ -157,9 +157,29 @@ export default function SettingsPage() {
 
       {/* Sign out */}
       <section className={styles.section}>
-        <button id="signout-btn" className="btn btn-danger btn-full"
+        <button id="signout-btn" className="btn btn-ghost btn-full"
           onClick={() => signOut({ callbackUrl: '/login' })}>
           Sign out
+        </button>
+      </section>
+
+      <div className="divider" />
+
+      {/* Danger Zone */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle} style={{ color: 'var(--accent)' }}>Danger Zone</h2>
+        <button 
+          className="btn btn-danger btn-full"
+          onClick={() => {
+            const confirm = window.prompt("This will permanently delete your account, goals, and history. Type 'DELETE' to confirm:")
+            if (confirm === 'DELETE') {
+              fetch('/api/user/delete', { method: 'DELETE' }).then(() => {
+                signOut({ callbackUrl: '/register' })
+              })
+            }
+          }}
+        >
+          Delete Account
         </button>
       </section>
 

@@ -13,13 +13,14 @@ function RegisterForm() {
 
   const [name, setName]         = useState('')
   const [email, setEmail]       = useState('')
+  const [securityAnswer, setSecurityAnswer] = useState('')
   const [error, setError]       = useState<string | null>(null)
   const [loading, setLoading]   = useState(false)
   const [showPin, setShowPin]   = useState(false)
 
   async function handlePinComplete(pin: string) {
-    if (!name || !email) {
-      setError('Please enter name and email first.')
+    if (!name || !email || !securityAnswer) {
+      setError('Please fill all fields first.')
       setShowPin(false)
       return
     }
@@ -29,7 +30,7 @@ function RegisterForm() {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, pin, token: inviteToken }),
+      body: JSON.stringify({ name, email, pin, securityAnswer, token: inviteToken }),
     })
     const data = await res.json()
 
@@ -46,7 +47,7 @@ function RegisterForm() {
 
   function handleInfoSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name || !email) return
+    if (!name || !email || !securityAnswer) return
     setError(null)
     setShowPin(true)
   }
@@ -72,6 +73,13 @@ function RegisterForm() {
             <input id="reg-email" type="email" className="input"
               value={email} onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com" required autoComplete="email" />
+          </div>
+          <div className="field">
+            <label htmlFor="reg-security">Who referred you? (Security Question)</label>
+            <input id="reg-security" type="text" className="input"
+              value={securityAnswer} onChange={e => setSecurityAnswer(e.target.value)}
+              placeholder="Friend's name, or 'Twitter'" required />
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>This will help you recover your PIN if you forget it.</p>
           </div>
           {error && <p className="error-msg" role="alert">{error}</p>}
           <button id="reg-submit" type="submit" className="btn btn-primary btn-full">

@@ -1,11 +1,11 @@
 interface CheckIn { date: string; status: string }
 
-/** Returns YYYY-MM-DD for a given Date */
+/** Returns YYYY-MM-DD for a given Date in local time */
 export function toDateString(d: Date): string {
-  return d.toISOString().split("T")[0]
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0]
 }
 
-/** Today's date string in local-ish time (UTC) */
+/** Today's date string in local time */
 export function today(): string {
   return toDateString(new Date())
 }
@@ -29,8 +29,8 @@ export function calculateStreak(checkIns: CheckIn[] | undefined): number {
   const now = new Date()
 
   for (let i = 0; i < 365; i++) {
-    const d = new Date(now)
-    d.setUTCDate(d.getUTCDate() - i)
+    const d = new Date()
+    d.setDate(d.getDate() - i)
     const ds = toDateString(d)
 
     if (doneSet.has(ds)) {
@@ -52,10 +52,9 @@ export function calculateStreak(checkIns: CheckIn[] | undefined): number {
  */
 export function lastNDays(n: number): string[] {
   const days: string[] = []
-  const now = new Date()
   for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(now)
-    d.setUTCDate(d.getUTCDate() - i)
+    const d = new Date()
+    d.setDate(d.getDate() - i)
     days.push(toDateString(d))
   }
   return days
