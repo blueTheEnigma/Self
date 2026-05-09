@@ -1,5 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <!-- Background -->
+  <!-- Solid Black Background for Pixel/Android Masking -->
+  <rect width="512" height="512" fill="#000000" />
+  
+  <!-- Gradient Background -->
   <rect width="512" height="512" rx="128" fill="url(#bg-grad)" />
 
   <!-- The "Aura" Ring -->

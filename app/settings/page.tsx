@@ -100,14 +100,14 @@ export default function SettingsPage() {
         <h2 className={styles.sectionTitle}>Insights</h2>
         <button 
           className="card-elevated" 
-          style={{ width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+          style={{ width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
           onClick={() => setShowRecap(true)}
         >
           <div>
-            <div style={{ fontWeight: 600, fontSize: 15 }}>Monthly Performance</div>
-            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>View your integrity score and habits.</div>
+            <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--text-1)' }}>Monthly Performance</div>
+            <div style={{ fontSize: 13, color: 'var(--text-2)' }}>View your integrity score and habits.</div>
           </div>
-          <span style={{ fontSize: 20 }}>→</span>
+          <span style={{ fontSize: 20, color: 'var(--accent)' }}>→</span>
         </button>
       </section>
 

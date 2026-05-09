@@ -89,8 +89,8 @@ function LoginForm() {
       )}
 
       {loginState === 'pin' && (
-        <div style={{ marginTop: '2rem' }}>
-          <p style={{ textAlign: 'center', marginBottom: '1rem', color: 'var(--text-2)' }}>
+        <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <p style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'var(--text-2)' }}>
             Enter your PIN for <strong>{email}</strong>
           </p>
           <PinPad onComplete={handlePinComplete} loading={loading} error={error} />
@@ -142,8 +142,8 @@ function LoginForm() {
       )}
 
       {loginState === 'forgot-new-pin' && (
-        <div style={{ marginTop: '2rem' }}>
-          <p style={{ textAlign: 'center', marginBottom: '1rem', color: 'var(--text-2)' }}>
+        <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <p style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'var(--text-2)' }}>
             Set your <strong>new PIN</strong>
           </p>
           <PinPad onComplete={handlePinComplete} loading={loading} error={error} />
