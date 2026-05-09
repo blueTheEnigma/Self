@@ -37,6 +37,9 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
       }
+      if (account) {
+        token.accessToken = account.access_token
+      }
       return token
     },
     async session({ session, token }) {
