@@ -23,7 +23,9 @@ export default function PinPage() {
       setError(data.error === 'PIN not set' ? 'No PIN set — set one first.' : 'Incorrect PIN. Try again.')
       return
     }
-    router.push('/dashboard')
+    const params = new URLSearchParams(window.location.search)
+    const cb = params.get('callbackUrl')
+    router.push(cb || '/dashboard')
     router.refresh()
   }
 

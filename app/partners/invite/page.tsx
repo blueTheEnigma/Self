@@ -50,8 +50,8 @@ function InviteContent() {
     }
   };
 
-  if (status === 'loading' || status === 'unauthenticated') {
-    return <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-2)' }}>Loading...</div>;
+  if (status === 'loading') {
+    return <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-2)' }}>Loading session...</div>;
   }
 
   return (

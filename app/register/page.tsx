@@ -31,7 +31,8 @@ function RegisterForm() {
     if (!res.ok) { setError(data.error ?? 'Registration failed.'); setLoading(false); return }
 
     await signIn('credentials', { email: email.toLowerCase(), password, redirect: false })
-    router.push('/pin/set')
+    const cb = params.get('callbackUrl')
+    router.push(cb ? `/pin/set?callbackUrl=${encodeURIComponent(cb)}` : '/pin/set')
   }
 
   return (
@@ -70,7 +71,7 @@ function RegisterForm() {
 
       <p className={styles.switch}>
         Already have an account?{' '}
-        <Link id="go-login" href="/login" className={styles.link}>Sign in</Link>
+        <Link id="go-login" href={params.get('callbackUrl') ? `/login?callbackUrl=${encodeURIComponent(params.get('callbackUrl')!)}` : '/login'} className={styles.link}>Sign in</Link>
       </p>
     </div>
   )

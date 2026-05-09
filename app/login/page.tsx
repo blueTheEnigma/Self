@@ -24,7 +24,8 @@ function LoginForm() {
     })
     setLoading(false)
     if (res?.error) { setError('Invalid email or password.'); return }
-    router.push('/pin')
+    const cb = params.get('callbackUrl')
+    router.push(cb ? `/pin?callbackUrl=${encodeURIComponent(cb)}` : '/pin')
   }
 
   return (

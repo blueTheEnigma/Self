@@ -42,7 +42,9 @@ export default function SetPinPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pin }),
     })
-    router.push('/dashboard')
+    const params = new URLSearchParams(window.location.search)
+    const cb = params.get('callbackUrl')
+    router.push(cb || '/dashboard')
     router.refresh()
   }
 
