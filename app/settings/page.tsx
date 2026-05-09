@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { signOut } from 'next-auth/react'
 import { NavBar } from '@/components/NavBar'
 import { ThemeSwitcher } from '@/components/ThemeSwitcher'
+import { RecapModal } from '@/components/RecapModal'
 import { useRouter } from 'next/navigation'
 import styles from './settings.module.css'
 
@@ -22,6 +23,7 @@ export default function SettingsPage() {
   const [pinError, setPinError] = useState<string | null>(null)
   const [currentPin, setCurrentPin] = useState('')
   const [newPin, setNewPin]     = useState('')
+  const [showRecap, setShowRecap] = useState(false)
 
   useEffect(() => {
     fetch('/api/user').then(r => r.json()).then(d => {
@@ -77,6 +79,7 @@ export default function SettingsPage() {
 
   return (
     <div className="app-shell">
+      {showRecap && <RecapModal onClose={() => setShowRecap(false)} />}
       <div className="page-header">
         <div>
           <h1 className="page-title">Settings</h1>
@@ -88,6 +91,24 @@ export default function SettingsPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Theme</h2>
         <ThemeSwitcher />
+      </section>
+
+      <div className="divider" />
+
+      {/* Insights */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Insights</h2>
+        <button 
+          className="card-elevated" 
+          style={{ width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+          onClick={() => setShowRecap(true)}
+        >
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 15 }}>Monthly Performance</div>
+            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>View your integrity score and habits.</div>
+          </div>
+          <span style={{ fontSize: 20 }}>→</span>
+        </button>
       </section>
 
       <div className="divider" />
