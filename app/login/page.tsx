@@ -17,6 +17,15 @@ function LoginForm() {
   const [loading, setLoading]   = useState(false)
   const [loginState, setLoginState] = useState<LoginState>('email')
 
+  useState(() => {
+    const e = params.get('error')
+    if (e === 'OAuthAccountNotLinked') {
+      setError('An account with this email already exists. Log in with your PIN first to link Google.')
+    } else if (e) {
+      setError('Authentication failed. Please try again.')
+    }
+  })
+
   async function handlePinComplete(pin: string) {
     if (loginState === 'pin') {
       setError(null)
