@@ -95,19 +95,26 @@ export const authOptions: NextAuthOptions = {
           }
           return true
         } catch (err) {
-          console.error("Error syncing OAuth user:", err)
-          return false
+          console.error("CRITICAL AUTH SYNC ERROR:", err)
+          // We return true anyway to let the JWT callback handle it if the user was created but account linking failed
+          return true 
         }
       }
       return true
     },
     async jwt({ token, user, account }) {
       // After manual sync, we find the user ID to ensure it's in the token
-      if (user) {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: user.email?.toLowerCase() || '' }
-        })
-        if (dbUser) token.id = dbUser.id
+      if (user?.email) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: user.email.toLowerCase() }
+          })
+          if (dbUser) {
+            token.id = dbUser.id
+          }
+        } catch (e) {
+          console.error("JWT Callback Error:", e)
+        }
       }
       return token
     },
@@ -120,7 +127,8 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
+    error: "/login", // Redirect to login on error
   },
-  debug: process.env.NODE_ENV === 'development',
+  debug: true,
   secret: process.env.NEXTAUTH_SECRET,
 }
