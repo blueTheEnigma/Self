@@ -3,29 +3,44 @@ import { Suspense, useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { PinPad } from '@/components/PinPad'
 import styles from './auth.module.css'
 
 function LoginForm() {
   const router = useRouter()
   const params = useSearchParams()
   const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError]       = useState<string | null>(null)
   const [loading, setLoading]   = useState(false)
+  const [showPin, setShowPin]   = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handlePinComplete(pin: string) {
+    if (!email) {
+      setError('Please enter your email first.')
+      setShowPin(false)
+      return
+    }
     setError(null)
     setLoading(true)
     const res = await signIn('credentials', {
       email: email.toLowerCase(),
-      password,
+      pin,
       redirect: false,
     })
     setLoading(false)
-    if (res?.error) { setError('Invalid email or password.'); return }
+    if (res?.error) { 
+      setError('Invalid email or PIN.')
+      return 
+    }
     const cb = params.get('callbackUrl')
-    router.push(cb ? `/pin?callbackUrl=${encodeURIComponent(cb)}` : '/pin')
+    router.push(cb || '/dashboard')
+  }
+
+  function handleEmailSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email) return
+    setError(null)
+    setShowPin(true)
   }
 
   return (
@@ -33,24 +48,35 @@ function LoginForm() {
       <div className={styles.logo}>SELF.</div>
       <p className={styles.tagline}>Private accountability for people who keep their word.</p>
 
-      <form onSubmit={handleSubmit} className={styles.form}>
-        <div className="field">
-          <label htmlFor="login-email">Email</label>
-          <input id="login-email" type="email" className="input"
-            value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="you@example.com" required autoComplete="email" />
+      {!showPin ? (
+        <form onSubmit={handleEmailSubmit} className={styles.form}>
+          <div className="field">
+            <label htmlFor="login-email">Email</label>
+            <input id="login-email" type="email" className="input"
+              value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com" required autoComplete="email" />
+          </div>
+          {error && <p className="error-msg" role="alert">{error}</p>}
+          <button type="submit" className="btn btn-primary btn-full">
+            Next
+          </button>
+        </form>
+      ) : (
+        <div style={{ marginTop: '2rem' }}>
+          <p style={{ textAlign: 'center', marginBottom: '1rem', color: 'var(--text-2)' }}>
+            Enter your PIN for <strong>{email}</strong>
+          </p>
+          <PinPad onComplete={handlePinComplete} loading={loading} error={error} />
+          <button 
+            onClick={() => setShowPin(false)} 
+            className="btn btn-ghost btn-full" 
+            style={{ marginTop: '1rem' }}
+            disabled={loading}
+          >
+            Back
+          </button>
         </div>
-        <div className="field">
-          <label htmlFor="login-password">Password</label>
-          <input id="login-password" type="password" className="input"
-            value={password} onChange={e => setPassword(e.target.value)}
-            placeholder="••••••••" required autoComplete="current-password" />
-        </div>
-        {error && <p className="error-msg" role="alert">{error}</p>}
-        <button id="login-submit" type="submit" className="btn btn-primary btn-full" disabled={loading}>
-          {loading ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
+      )}
 
       <p className={styles.switch}>
         No account?{' '}

@@ -3,21 +3,6 @@ import { NextResponse } from 'next/server'
 
 export default withAuth(
   function middleware(req) {
-    const token = req.nextauth.token
-    const { pathname } = req.nextUrl
-
-    // Public paths that don't need PIN
-    const publicPaths = ['/login', '/register', '/api/auth', '/api/auth/register']
-    if (publicPaths.some(p => pathname.startsWith(p))) return NextResponse.next()
-
-    // PIN setup page: requires auth but not PIN
-    if (pathname === '/pin' || pathname === '/pin/set') return NextResponse.next()
-
-    // All app routes: require PIN to be verified
-    if (token && !token.pinVerified) {
-      return NextResponse.redirect(new URL('/pin', req.url))
-    }
-
     return NextResponse.next()
   },
   {
@@ -30,6 +15,7 @@ export default withAuth(
           pathname.startsWith('/register') || 
           pathname.startsWith('/api')
         ) return true
+        
         return !!token
       },
     },

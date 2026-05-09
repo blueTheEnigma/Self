@@ -3,6 +3,7 @@ import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
+import { PinPad } from '@/components/PinPad'
 import styles from '../login/auth.module.css'
 
 function RegisterForm() {
@@ -12,27 +13,42 @@ function RegisterForm() {
 
   const [name, setName]         = useState('')
   const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError]       = useState<string | null>(null)
   const [loading, setLoading]   = useState(false)
+  const [showPin, setShowPin]   = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handlePinComplete(pin: string) {
+    if (!name || !email) {
+      setError('Please enter name and email first.')
+      setShowPin(false)
+      return
+    }
     setError(null)
     setLoading(true)
 
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, token: inviteToken }),
+      body: JSON.stringify({ name, email, pin, token: inviteToken }),
     })
     const data = await res.json()
 
-    if (!res.ok) { setError(data.error ?? 'Registration failed.'); setLoading(false); return }
+    if (!res.ok) { 
+      setError(data.error ?? 'Registration failed.')
+      setLoading(false)
+      return 
+    }
 
-    await signIn('credentials', { email: email.toLowerCase(), password, redirect: false })
+    await signIn('credentials', { email: email.toLowerCase(), pin, redirect: false })
     const cb = params.get('callbackUrl')
-    router.push(cb ? `/pin/set?callbackUrl=${encodeURIComponent(cb)}` : '/pin/set')
+    router.push(cb || '/dashboard')
+  }
+
+  function handleInfoSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!name || !email) return
+    setError(null)
+    setShowPin(true)
   }
 
   return (
@@ -43,31 +59,41 @@ function RegisterForm() {
         : <p className={styles.tagline}>Start your private accountability practice.</p>
       }
 
-      <form onSubmit={handleSubmit} className={styles.form}>
-        <div className="field">
-          <label htmlFor="reg-name">Your name</label>
-          <input id="reg-name" type="text" className="input"
-            value={name} onChange={e => setName(e.target.value)}
-            placeholder="Alex" required autoComplete="name" />
+      {!showPin ? (
+        <form onSubmit={handleInfoSubmit} className={styles.form}>
+          <div className="field">
+            <label htmlFor="reg-name">Your name</label>
+            <input id="reg-name" type="text" className="input"
+              value={name} onChange={e => setName(e.target.value)}
+              placeholder="Alex" required autoComplete="name" />
+          </div>
+          <div className="field">
+            <label htmlFor="reg-email">Email</label>
+            <input id="reg-email" type="email" className="input"
+              value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com" required autoComplete="email" />
+          </div>
+          {error && <p className="error-msg" role="alert">{error}</p>}
+          <button id="reg-submit" type="submit" className="btn btn-primary btn-full">
+            Next
+          </button>
+        </form>
+      ) : (
+        <div style={{ marginTop: '2rem' }}>
+          <p style={{ textAlign: 'center', marginBottom: '1rem', color: 'var(--text-2)' }}>
+            Set a 4-digit PIN for <strong>{email}</strong>
+          </p>
+          <PinPad onComplete={handlePinComplete} loading={loading} error={error} />
+          <button 
+            onClick={() => setShowPin(false)} 
+            className="btn btn-ghost btn-full" 
+            style={{ marginTop: '1rem' }}
+            disabled={loading}
+          >
+            Back
+          </button>
         </div>
-        <div className="field">
-          <label htmlFor="reg-email">Email</label>
-          <input id="reg-email" type="email" className="input"
-            value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="you@example.com" required autoComplete="email" />
-        </div>
-        <div className="field">
-          <label htmlFor="reg-password">Password</label>
-          <input id="reg-password" type="password" className="input"
-            value={password} onChange={e => setPassword(e.target.value)}
-            placeholder="At least 8 characters" required minLength={8}
-            autoComplete="new-password" />
-        </div>
-        {error && <p className="error-msg" role="alert">{error}</p>}
-        <button id="reg-submit" type="submit" className="btn btn-primary btn-full" disabled={loading}>
-          {loading ? 'Creating account…' : 'Create account'}
-        </button>
-      </form>
+      )}
 
       <p className={styles.switch}>
         Already have an account?{' '}
