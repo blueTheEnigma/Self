@@ -1,12 +1,11 @@
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
-import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  // We remove the adapter and handle syncing manually to avoid version conflicts between v4 and v5 packages
   session: { strategy: "jwt" },
   providers: [
     GoogleProvider({
@@ -33,12 +32,82 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
-      if (user) {
-        token.id = user.id
+    async signIn({ user, account }) {
+      if (account?.provider === 'google' && user.email) {
+        try {
+          // Manually sync Google user to our database
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email.toLowerCase() }
+          })
+
+          if (existingUser) {
+            // Check if account is already linked
+            const existingAccount = await prisma.account.findFirst({
+              where: { 
+                provider: 'google', 
+                providerAccountId: account.providerAccountId 
+              }
+            })
+
+            if (!existingAccount) {
+              await prisma.account.create({
+                data: {
+                  userId: existingUser.id,
+                  type: account.type,
+                  provider: account.provider,
+                  providerAccountId: account.providerAccountId,
+                  access_token: account.access_token,
+                  expires_at: account.expires_at,
+                  id_token: account.id_token,
+                  token_type: account.token_type,
+                  scope: account.scope,
+                }
+              })
+            }
+            // Update image if missing
+            if (!existingUser.image && user.image) {
+              await prisma.user.update({
+                where: { id: existingUser.id },
+                data: { image: user.image }
+              })
+            }
+          } else {
+            // Create new user and link account
+            await prisma.user.create({
+              data: {
+                email: user.email.toLowerCase(),
+                name: user.name || 'User',
+                image: user.image,
+                accounts: {
+                  create: {
+                    type: account.type,
+                    provider: account.provider,
+                    providerAccountId: account.providerAccountId,
+                    access_token: account.access_token,
+                    expires_at: account.expires_at,
+                    id_token: account.id_token,
+                    token_type: account.token_type,
+                    scope: account.scope,
+                  }
+                }
+              }
+            })
+          }
+          return true
+        } catch (err) {
+          console.error("Error syncing OAuth user:", err)
+          return false
+        }
       }
-      if (account) {
-        token.accessToken = account.access_token
+      return true
+    },
+    async jwt({ token, user, account }) {
+      // After manual sync, we find the user ID to ensure it's in the token
+      if (user) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email?.toLowerCase() || '' }
+        })
+        if (dbUser) token.id = dbUser.id
       }
       return token
     },
@@ -52,6 +121,6 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
-  debug: process.env.NODE_ENV === 'development' || true, // Enable for now to debug production
+  debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
 }
