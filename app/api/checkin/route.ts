@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const userId = (session.user as any).id
 
-  const { goalId, status, date } = await req.json()
+  const { goalId, status, date, reflection } = await req.json()
   if (!goalId || !["DONE", "MISSED"].includes(status))
     return NextResponse.json({ error: "Invalid fields" }, { status: 400 })
 
@@ -22,9 +22,15 @@ export async function POST(req: NextRequest) {
   const checkInDate = date || today()
   const checkIn = await prisma.checkIn.upsert({
     where: { goalId_date: { goalId, date: checkInDate } },
-    update: { status },
-    create: { goalId, date: checkInDate, status },
+    update: { status, reflection },
+    create: { goalId, date: checkInDate, status, reflection },
   })
+
+  // Gamification: Add XP if status is DONE
+  if (status === "DONE") {
+    const { addXP } = await import("@/lib/xp")
+    await addXP(userId, 10)
+  }
 
   return NextResponse.json(checkIn)
 }

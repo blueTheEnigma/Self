@@ -6,39 +6,43 @@
 }
 
 .ring {
-  width: 88px;
-  height: 88px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
-  border: 2.5px solid var(--goal-color, var(--border));
-  background: transparent;
+  border: 3px solid var(--goal-color, var(--border));
+  background: var(--bg-surface);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.15s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   -webkit-tap-highlight-color: transparent;
+  box-shadow: var(--shadow);
 }
 
 .ring:hover:not(:disabled) {
-  transform: scale(1.06);
-  box-shadow: 0 0 20px color-mix(in srgb, var(--goal-color, var(--accent)) 40%, transparent);
+  transform: translateY(-4px) scale(1.04);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--goal-color, var(--accent)) 25%, transparent);
 }
 
 .ring:active:not(:disabled) {
-  transform: scale(0.94);
+  transform: scale(0.92);
 }
 
 .ring.done {
-  background: color-mix(in srgb, var(--goal-color, var(--accent)) 18%, transparent);
+  background: color-mix(in srgb, var(--goal-color, var(--accent)) 25%, transparent);
   border-color: var(--goal-color, var(--accent));
-  box-shadow: 0 0 24px color-mix(in srgb, var(--goal-color, var(--accent)) 35%, transparent);
+  box-shadow: 0 0 32px color-mix(in srgb, var(--goal-color, var(--accent)) 40%, transparent);
+  border-width: 4px;
 }
 
 .ring.missed {
-  background: rgba(207, 102, 121, 0.08);
+  background: rgba(255, 95, 126, 0.1);
   border-color: var(--missed-color);
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .ring:disabled { cursor: not-allowed; }
@@ -115,8 +119,31 @@
   letter-spacing: 0.04em;
 }
 
-.ring.unscheduled {
-  opacity: 0.35;
-  border-style: dashed;
+.reflectBox {
+  margin-top: 8px;
+  width: 140px;
+  animation: fade-in 0.3s ease;
+}
+
+.reflectInput {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-1);
+  font-size: 11px;
+  outline: none;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.reflectInput:focus {
+  border-color: var(--accent);
+}
+
+.reflectInput::placeholder {
+  color: var(--text-3);
+  font-style: italic;
 }
 

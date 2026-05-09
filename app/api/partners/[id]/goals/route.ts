@@ -25,20 +25,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const partner = await prisma.user.findUnique({
     where: { id: partnerId },
-    select: { id: true, name: true },
+    select: { id: true, name: true, xp: true, level: true },
   })
   if (!partner) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const goals = await prisma.goal.findMany({
-    where: { userId: partnerId, isActive: true },
+    where: { 
+      userId: partnerId, 
+      isActive: true,
+      isPrivate: false 
+    },
     include: { checkIns: { orderBy: { date: "desc" }, take: 30 } },
     orderBy: { createdAt: "asc" },
   })
 
-  // Strip title from UNNAMED goals for privacy
-  const sanitized = goals.map((g: { type: string; title: string | null; [key: string]: unknown }) => ({
+  // Strip title from UNNAMED goals for extra privacy if needed
+  const sanitized = goals.map((g: any) => ({
     ...g,
-    title: g.type === "NAMED" ? g.title : null,
+    title: g.type === "NAMED" ? g.title : "Daily Habit",
   }))
 
   return NextResponse.json({ partner, goals: sanitized })

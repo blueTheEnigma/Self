@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Providers } from '@/components/Providers'
+import { NotificationCenter } from '@/components/NotificationCenter'
 
 export const metadata: Metadata = {
   title: 'SELF.',
@@ -16,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <Providers>
+          <NotificationCenter />
           {children}
         </Providers>
       </body>

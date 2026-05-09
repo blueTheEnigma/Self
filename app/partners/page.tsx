@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { NavBar } from '@/components/NavBar';
 import styles from './partners.module.css';
 
@@ -58,74 +59,86 @@ export default function Partners() {
     if (res.ok) fetchConnections();
   };
 
-  if (loading) return null;
+  if (loading) return <div className="app-shell"><div className="page-center">Loading…</div></div>
 
   return (
     <div className="app-shell">
-      <div className={styles.container}>
-        <header className={styles.header}>
-          <h1 className={styles.title}>PARTNERS.</h1>
-        </header>
+      <div className="page-header">
+        <h1 className="page-title">Circle</h1>
+      </div>
 
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>Add Partner</h2>
-          {inviteLink ? (
-            <div className={styles.inviteBox}>
-              <input type="text" readOnly value={inviteLink} className={styles.linkInput} />
-              <button onClick={copyLink} className={styles.button}>Copy</button>
-            </div>
-          ) : (
-            <button onClick={generateLink} className={styles.button}>
-              Generate Invite Link
-            </button>
-          )}
+      <div className={styles.section}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <h2 className="label">Your Circle</h2>
+          <span className={styles.limitBadge}>{connections.filter(c => c.status === 'APPROVED').length} / 5 Partners</span>
         </div>
-
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>Your Circle</h2>
-          <div className={styles.list}>
-            {connections.map(conn => {
-              const isRequester = conn.requesterId === (session?.user as any)?.id;
-              const partner = isRequester ? conn.responder : conn.requester;
-              
-              return (
-                <div key={conn.id} className={styles.card}>
-                  <div className={styles.partnerInfo}>
-                    <div className={styles.avatar}>{partner?.name?.charAt(0) || '?'}</div>
-                    <div>
-                      <div className={styles.name}>{partner?.name || 'Pending Invite'}</div>
-                      <div className={styles.status}>{conn.status}</div>
+        
+        <div className={styles.list}>
+          {connections.map(conn => {
+            const isRequester = conn.requesterId === (session?.user as any)?.id;
+            const partner = isRequester ? conn.responder : conn.requester;
+            const isPending = conn.status === 'PENDING';
+            
+            return (
+              <div key={conn.id} className="card-elevated" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className={styles.partnerInfo}>
+                  <div className={styles.avatar}>
+                    {isPending ? '✨' : (partner?.name?.charAt(0) || '👤')}
+                  </div>
+                  <div>
+                    <div className={styles.name}>
+                      {partner?.name || (isRequester ? 'Waiting for Friend...' : 'Tag Along Invite')}
+                    </div>
+                    <div className={styles.statusBadge}>
+                      {isPending ? (isRequester ? 'Invite Sent' : 'Wants to tag along') : 'Partner'}
                     </div>
                   </div>
-                  <div className={styles.actions}>
-                    {conn.status === 'PENDING' && isRequester && partner && (
-                      <button onClick={() => approvePartner(conn.id)} className={styles.approveButton}>
-                        Approve
-                      </button>
-                    )}
-                    {conn.status === 'APPROVED' && partner && (
-                      <>
-                        <button onClick={() => window.location.href = `/partners/${partner.id}`} className={styles.viewButton}>
-                          View
-                        </button>
-                        <button onClick={() => removePartner(conn.id)} className={styles.viewButton} style={{ color: 'var(--error)', borderColor: 'var(--error)' }}>
-                          Remove
-                        </button>
-                      </>
-                    )}
-                    {conn.status === 'PENDING' && !partner && isRequester && (
-                      <button onClick={() => removePartner(conn.id)} className={styles.viewButton} style={{ color: 'var(--text-3)', borderColor: 'var(--border)' }}>
-                        Cancel Invite
-                      </button>
-                    )}
-                  </div>
                 </div>
-              );
-            })}
-            {connections.length === 0 && (
-              <div className={styles.emptyState}>No partners yet.</div>
-            )}
-          </div>
+                <div className={styles.actions}>
+                  {isPending && !isRequester && (
+                    <button onClick={() => approvePartner(conn.id)} className="btn btn-primary btn-sm">
+                      Accept
+                    </button>
+                  )}
+                  {conn.status === 'APPROVED' && partner && (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <Link href={`/partners/${partner.id}`} className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 12 }}>
+                        View
+                      </Link>
+                      <button onClick={() => removePartner(conn.id)} className="btn btn-ghost" style={{ padding: '8px 12px', opacity: 0.5 }}>
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                  {isPending && isRequester && (
+                    <button onClick={() => removePartner(conn.id)} className="btn btn-ghost" style={{ fontSize: 12 }}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          
+          {connections.filter(c => c.status === 'APPROVED').length < 5 && connections.length < 10 && (
+            <div className={styles.inviteSection}>
+              <p className={styles.inviteText}>Invite a friend to tag along on your journey.</p>
+              {inviteLink ? (
+                <div className={styles.inviteBox}>
+                  <input type="text" readOnly value={inviteLink} className="input" style={{ flex: 1, fontSize: 12 }} />
+                  <button onClick={copyLink} className="btn btn-primary btn-sm">Copy</button>
+                </div>
+              ) : (
+                <button onClick={generateLink} className="btn btn-ghost btn-full" style={{ borderStyle: 'dashed' }}>
+                  + Generate Invite Link
+                </button>
+              )}
+            </div>
+          )}
+
+          {connections.length === 0 && !inviteLink && (
+            <div className={styles.emptyState}>Your circle is empty. Start your journey with a friend.</div>
+          )}
         </div>
       </div>
       <NavBar />

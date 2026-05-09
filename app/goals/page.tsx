@@ -37,6 +37,7 @@ export default function GoalsDashboard() {
   const [title, setTitle] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [frequency, setFrequency] = useState('DAILY');
+  const [isPrivate, setIsPrivate] = useState(false);
 
   const fetchGoals = () => {
     fetch('/api/goals')
@@ -57,11 +58,12 @@ export default function GoalsDashboard() {
     const res = await fetch('/api/goals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, title: type === 'NAMED' ? title : null, color, frequency })
+      body: JSON.stringify({ type, title: type === 'NAMED' ? title : null, color, frequency, isPrivate })
     });
     if (res.ok) {
       setShowModal(false);
       setTitle('');
+      setIsPrivate(false);
       fetchGoals();
     } else {
       const err = await res.json();
@@ -79,28 +81,30 @@ export default function GoalsDashboard() {
     fetchGoals();
   };
 
-  if (loading) return null;
+  if (loading) return <div className="app-shell"><div className="page-center">Loading…</div></div>
 
   return (
     <div className="app-shell">
       <header className="page-header">
         <div>
-          <h1 className="page-title">ALL GOALS.</h1>
-          <p className="page-subtitle">Manage your habits</p>
+          <h1 className="page-title">Goals</h1>
         </div>
-        <button className={styles.addButton} onClick={() => setShowModal(true)}>
-          + Add Goal
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          + Add
         </button>
       </header>
 
       <div className={styles.goalsList}>
         {goals.map(goal => (
-          <div key={goal.id} className={styles.goalCard} style={{ borderLeft: `4px solid ${goal.color}` }}>
-            <div className={styles.goalInfo}>
-              <h3 className={styles.goalTitle}>{goal.type === 'NAMED' ? goal.title : 'Unnamed Goal'}</h3>
-              <p className={styles.goalFreq}>{FREQUENCIES.find(f => f.id === goal.frequency)?.label || goal.frequency}</p>
+          <div key={goal.id} className="card-elevated" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div className={styles.goalInfo} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ width: 12, height: 12, borderRadius: '50%', background: goal.color }} />
+              <div>
+                <h3 className={styles.goalTitle}>{goal.type === 'NAMED' ? goal.title : 'Private Goal'}</h3>
+                <p className={styles.goalFreq}>{FREQUENCIES.find(f => f.id === goal.frequency)?.label || goal.frequency}</p>
+              </div>
             </div>
-            <button className={styles.archiveButton} onClick={() => handleArchive(goal.id)}>
+            <button className="btn btn-ghost btn-sm" onClick={() => handleArchive(goal.id)}>
               Archive
             </button>
           </div>
@@ -115,51 +119,59 @@ export default function GoalsDashboard() {
 
       {showModal && (
         <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
-            <h2>New Goal</h2>
+          <div className="card-elevated" style={{ width: '100%', maxWidth: 400 }}>
+            <h2 style={{ marginBottom: 20 }}>New Goal</h2>
             <form onSubmit={handleCreate}>
-              <div className={styles.formGroup}>
-                <label>Type</label>
-                <select value={type} onChange={e => setType(e.target.value)}>
+              <div className="form-group">
+                <label className="label">Type</label>
+                <select className="input" value={type} onChange={e => setType(e.target.value)}>
                   <option value="NAMED">Named Goal</option>
                   <option value="UNNAMED">Unnamed Goal (Color Only)</option>
                 </select>
               </div>
 
               {type === 'NAMED' && (
-                <div className={styles.formGroup}>
-                  <label>Title</label>
-                  <input type="text" required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., Read 10 pages" />
+                <div className="form-group">
+                  <label className="label">Title</label>
+                  <input className="input" type="text" required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., Read 10 pages" />
                 </div>
               )}
 
-              <div className={styles.formGroup}>
-                <label>Frequency</label>
-                <select value={frequency} onChange={e => setFrequency(e.target.value)}>
+              <div className="form-group">
+                <label className="label">Frequency</label>
+                <select className="input" value={frequency} onChange={e => setFrequency(e.target.value)}>
                   {FREQUENCIES.map(f => (
                     <option key={f.id} value={f.id}>{f.label}</option>
                   ))}
                 </select>
               </div>
 
-              <div className={styles.formGroup}>
-                <label>Color</label>
+              <div className="form-group">
+                <label className="label">Privacy</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text-2)' }}>
+                  <input type="checkbox" checked={isPrivate} onChange={e => setIsPrivate(e.target.checked)} />
+                  Keep this goal private from partners
+                </label>
+              </div>
+
+              <div className="form-group">
+                <label className="label">Color</label>
                 <div className={styles.colorPicker}>
                   {COLORS.map(c => (
                     <button
                       type="button"
                       key={c}
                       className={styles.colorBtn}
-                      style={{ backgroundColor: c, border: color === c ? '3px solid var(--text-1)' : 'none' }}
+                      style={{ backgroundColor: c, border: color === c ? '2px solid var(--text-1)' : 'none' }}
                       onClick={() => setColor(c)}
                     />
                   ))}
                 </div>
               </div>
 
-              <div className={styles.modalActions}>
-                <button type="button" onClick={() => setShowModal(false)} className={styles.cancelBtn}>Cancel</button>
-                <button type="submit" className={styles.saveBtn}>Save Goal</button>
+              <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+                <button type="button" onClick={() => setShowModal(false)} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save</button>
               </div>
             </form>
           </div>

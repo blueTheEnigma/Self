@@ -4,12 +4,12 @@ import { PrismaPg } from "@prisma/adapter-pg"
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined }
 
-const url = process.env.POSTGRES_URL?.trim()
+const url = (process.env.POSTGRES_URL || process.env.DATABASE_URL)?.trim()
 
 function createPrismaClient() {
   if (!url) {
-    console.error("[PRISMA DEBUG] CRITICAL: POSTGRES_URL is missing")
-    return new PrismaClient({ log: ["error"] } as any)
+    console.error("[PRISMA DEBUG] CRITICAL: No database URL found (POSTGRES_URL or DATABASE_URL)")
+    return new PrismaClient({ log: ["error"] })
   }
 
   try {

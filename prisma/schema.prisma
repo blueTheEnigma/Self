@@ -13,6 +13,8 @@ model User {
   pinHash        String
   securityAnswer String   @default("") // Hashed answer for forgot PIN
   theme          String   @default("midnight")
+  xp             Int      @default(0)
+  level          Int      @default(1)
   createdAt      DateTime @default(now())
 
   goals               Goal[]
@@ -32,17 +34,20 @@ model Goal {
   frequency    String    @default("DAILY") // "DAILY"|"WEEKDAYS"|"WEEKENDS"|"MON_WED_FRI"|"TUE_THU_SAT"|"WEEKLY"|"BIWEEKLY"|"MONTHLY"
   reminderTime String?   // "HH:MM" 24h format, null = no reminder
   isActive     Boolean   @default(true)
+  isPrivate    Boolean   @default(false)
   createdAt    DateTime  @default(now())
 
   checkIns     CheckIn[]
 }
 
 model CheckIn {
-  id      String   @id @default(cuid())
-  goalId  String
-  goal    Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  date    String   // ISO date string "YYYY-MM-DD"
-  status  String   // "DONE" | "MISSED"
+  id         String   @id @default(cuid())
+  goalId     String
+  goal       Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  date       String   // ISO date string "YYYY-MM-DD"
+  status     String   // "DONE" | "MISSED"
+  reflection String?  // Optional reflection or "win"
+  createdAt  DateTime @default(now())
 
   @@unique([goalId, date])
 }
@@ -64,6 +69,7 @@ model Nudge {
   receiverId String
   sender     User     @relation("SentNudges", fields: [senderId], references: [id], onDelete: Cascade)
   receiver   User     @relation("ReceivedNudges", fields: [receiverId], references: [id], onDelete: Cascade)
+  reaction   String?  // Optional emoji reaction (🔥, 💙, 🙌)
   createdAt  DateTime @default(now())
   read       Boolean  @default(false)
 }

@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const senderId = (session.user as any).id
 
-  const { receiverId } = await req.json()
+  const { receiverId, reaction } = await req.json()
   if (!receiverId) return NextResponse.json({ error: "Missing receiverId" }, { status: 400 })
 
   // Verify they are partners
@@ -26,20 +26,23 @@ export async function POST(req: NextRequest) {
   })
   if (!connection) return NextResponse.json({ error: "Not partners" }, { status: 403 })
 
-  // Throttle: max 1 nudge per 24h per sender→receiver pair
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
-  const recent = await prisma.nudge.findFirst({
-    where: { senderId, receiverId, createdAt: { gte: since } },
-  })
-  if (recent) return NextResponse.json({ error: "Already nudged in the last 24h" }, { status: 429 })
+  // Throttle: only for "empty" nudges (alerts). Reactions are unlimited.
+  if (!reaction) {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const recent = await prisma.nudge.findFirst({
+      where: { senderId, receiverId, reaction: null, createdAt: { gte: since } },
+    })
+    if (recent) return NextResponse.json({ error: "Already nudged in the last 24h" }, { status: 429 })
+  }
 
   const sender = await prisma.user.findUnique({ where: { id: senderId } })
-  const nudge = await prisma.nudge.create({ data: { senderId, receiverId } })
+  const nudge = await prisma.nudge.create({ data: { senderId, receiverId, reaction } })
 
   // Push real-time SSE event to receiver
-  sendSSEEvent(receiverId, "nudge", {
+  sendSSEEvent(receiverId, reaction ? "reaction" : "nudge", {
     id: nudge.id,
     senderName: sender?.name ?? "Someone",
+    reaction,
     createdAt: nudge.createdAt,
   })
 

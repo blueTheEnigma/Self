@@ -12,14 +12,17 @@ interface Goal {
 interface Props {
   goal: Goal
   todayStatus: string | null
+  todayReflection: string | null
   streak: number
-  onToggle: (goalId: string, status: 'DONE' | 'MISSED') => Promise<void>
+  onToggle: (goalId: string, status: 'DONE' | 'MISSED', reflection?: string) => Promise<void>
 }
 
-export function GoalRing({ goal, todayStatus, streak, onToggle }: Props) {
+export function GoalRing({ goal, todayStatus, todayReflection, streak, onToggle }: Props) {
   const [status, setStatus] = useState<string | null>(todayStatus)
+  const [reflection, setReflection] = useState(todayReflection ?? '')
   const [loading, setLoading] = useState(false)
   const [pulse, setPulse] = useState(false)
+  const [showReflect, setShowReflect] = useState(false)
 
   const scheduled = isScheduledToday(goal.frequency)
 
@@ -29,9 +32,17 @@ export function GoalRing({ goal, todayStatus, streak, onToggle }: Props) {
     setLoading(true)
     setPulse(true)
     setTimeout(() => setPulse(false), 700)
-    await onToggle(goal.id, next)
+    await onToggle(goal.id, next, reflection)
     setStatus(next)
     setLoading(false)
+    if (next === 'DONE') setShowReflect(true)
+  }
+
+  async function saveReflection() {
+    setLoading(true)
+    await onToggle(goal.id, status as any, reflection)
+    setLoading(false)
+    setShowReflect(false)
   }
 
   const isDone   = status === 'DONE'
@@ -63,21 +74,9 @@ export function GoalRing({ goal, todayStatus, streak, onToggle }: Props) {
       </button>
 
       <div className={styles.meta}>
-        <span className={styles.title}>
+        <span className={styles.title} onClick={() => isDone && setShowReflect(!showReflect)}>
           {goal.type === 'NAMED' ? goal.title : <span className={styles.private}>private</span>}
         </span>
-
-        {/* Frequency badge — only show if not daily */}
-        {goal.frequency !== 'DAILY' && (
-          <span className={styles.freqBadge}>
-            {FREQUENCY_LABELS[goal.frequency]}
-          </span>
-        )}
-
-        {/* Reminder time */}
-        {reminderDisplay && (
-          <span className={styles.reminderTag}>⏰ {reminderDisplay}</span>
-        )}
 
         {streak > 0 && (
           <span className={styles.streak}>
@@ -85,7 +84,22 @@ export function GoalRing({ goal, todayStatus, streak, onToggle }: Props) {
           </span>
         )}
 
-        {/* Not scheduled today indicator */}
+        {isDone && showReflect && (
+          <div className={styles.reflectBox}>
+            <input 
+              className={styles.reflectInput}
+              placeholder="Any win or reflection?"
+              value={reflection}
+              onChange={e => setReflection(e.target.value)}
+              onBlur={saveReflection}
+              autoFocus
+            />
+          </div>
+        )}
+
+        {!isDone && scheduled && !status && (
+          <span className={styles.offDay}>tap to check in</span>
+        )}
         {!scheduled && !status && (
           <span className={styles.offDay}>rest day</span>
         )}

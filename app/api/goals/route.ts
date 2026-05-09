@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const userId = (session.user as any).id
 
-  const { type, title, color, frequency, reminderTime } = await req.json()
+  const { type, title, color, frequency, reminderTime, isPrivate } = await req.json()
   if (!type || !color) return NextResponse.json({ error: "Missing fields" }, { status: 400 })
   if (type === "NAMED" && !title?.trim())
     return NextResponse.json({ error: "Named goals require a title" }, { status: 400 })
@@ -47,19 +47,20 @@ export async function POST(req: NextRequest) {
       color,
       frequency: frequency ?? "DAILY",
       reminderTime: reminderTime || null,
+      isPrivate: !!isPrivate,
     },
     include: { checkIns: true },
   })
   return NextResponse.json(goal, { status: 201 })
 }
 
-// PATCH /api/goals  — archive a goal OR update its frequency/reminder
+// PATCH /api/goals  — archive a goal OR update its frequency/reminder/privacy
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const userId = (session.user as any).id
 
-  const { id, archive, frequency, reminderTime } = await req.json()
+  const { id, archive, frequency, reminderTime, isPrivate } = await req.json()
   if (!id) return NextResponse.json({ error: "Missing goal id" }, { status: 400 })
 
   if (archive) {
@@ -67,8 +68,8 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // Update frequency / reminderTime
-  const data: Record<string, string | null> = {}
+  // Update frequency / reminderTime / privacy
+  const data: any = {}
   if (frequency !== undefined) {
     if (!VALID_FREQUENCIES.includes(frequency))
       return NextResponse.json({ error: "Invalid frequency" }, { status: 400 })
@@ -78,6 +79,9 @@ export async function PATCH(req: NextRequest) {
     if (reminderTime && !/^\d{2}:\d{2}$/.test(reminderTime))
       return NextResponse.json({ error: "Invalid time format" }, { status: 400 })
     data.reminderTime = reminderTime || null
+  }
+  if (isPrivate !== undefined) {
+    data.isPrivate = !!isPrivate
   }
 
   const updated = await prisma.goal.update({ where: { id }, data })
