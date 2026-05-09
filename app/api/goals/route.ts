@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-const VALID_FREQUENCIES = ["DAILY", "WEEKDAYS", "WEEKENDS", "MON_WED_FRI", "TUE_THU_SAT"]
+const VALID_FREQUENCIES = ["DAILY", "WEEKDAYS", "WEEKENDS", "MON_WED_FRI", "TUE_THU_SAT", "WEEKLY", "BIWEEKLY", "MONTHLY"]
 
 // GET /api/goals  — fetch current user's active goals with check-ins
 export async function GET(req: NextRequest) {

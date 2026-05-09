@@ -12,7 +12,7 @@ export default function Partners() {
   const [inviteLink, setInviteLink] = useState('');
 
   const fetchConnections = async () => {
-    const res = await fetch('/api/v1/partners');
+    const res = await fetch('/api/partners');
     const data = await res.json();
     setConnections(data.connections || []);
     setLoading(false);
@@ -24,7 +24,7 @@ export default function Partners() {
   }, [status]);
 
   const generateLink = async () => {
-    const res = await fetch('/api/v1/partners', { method: 'POST' });
+    const res = await fetch('/api/partners', { method: 'POST' });
     const data = await res.json();
     if (data.link) setInviteLink(data.link);
     else alert(data.error);
@@ -37,7 +37,7 @@ export default function Partners() {
   };
 
   const approvePartner = async (connectionId: string) => {
-    const res = await fetch('/api/v1/partners/approve', {
+    const res = await fetch('/api/partners/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ connectionId })

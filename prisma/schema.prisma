@@ -29,7 +29,7 @@ model Goal {
   type         String    // "NAMED" | "UNNAMED"
   title        String?   // Only for NAMED
   color        String    // Hex color string
-  frequency    String    @default("DAILY") // "DAILY"|"WEEKDAYS"|"WEEKENDS"|"MON_WED_FRI"|"TUE_THU_SAT"
+  frequency    String    @default("DAILY") // "DAILY"|"WEEKDAYS"|"WEEKENDS"|"MON_WED_FRI"|"TUE_THU_SAT"|"WEEKLY"|"BIWEEKLY"|"MONTHLY"
   reminderTime String?   // "HH:MM" 24h format, null = no reminder
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
