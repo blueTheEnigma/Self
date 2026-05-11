@@ -19,7 +19,7 @@ export function today(): string {
 export function calculateStreak(checkIns: CheckIn[] | undefined): number {
   if (!checkIns) return 0
   const doneSet = new Set(
-    checkIns.filter((c) => c.status === "DONE").map((c) => c.date)
+    checkIns.filter((c) => c.status === "DONE" || c.status === "PARTIAL").map((c) => c.date)
   )
   const missedSet = new Set(
     checkIns.filter((c) => c.status === "MISSED").map((c) => c.date)

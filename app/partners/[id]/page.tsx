@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import styles from './PartnerProfile.module.css'
 
 interface Goal {
-  id: string; type: string; title: string | null; color: string
+  id: string; category: string; title: string; color: string
   frequency: string; reminderTime: string | null; checkIns: any[]
 }
 interface PartnerProfile {

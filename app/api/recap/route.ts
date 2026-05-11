@@ -14,10 +14,16 @@ export async function GET(req: NextRequest) {
   const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
 
   const goals = await prisma.goal.findMany({
-    where: { userId },
+    where: { 
+      OR: [
+        { ownerId: userId },
+        { participants: { some: { userId } } }
+      ]
+    },
     include: {
       checkIns: {
         where: {
+          userId, // Only include the user's own check-ins for their recap
           date: {
             gte: firstOfLastMonth.toISOString().split('T')[0],
             lt: firstOfThisMonth.toISOString().split('T')[0],
@@ -27,28 +33,36 @@ export async function GET(req: NextRequest) {
     }
   })
 
+  let totalEffort = 0
   let totalScheduled = 0
-  let totalDone = 0
   const goalStats = goals.map(goal => {
     const doneCount = goal.checkIns.filter(c => c.status === 'DONE').length
-    // Simplification: assume daily for recap score, or count total days in month
-    // For a more accurate score, we'd need to check against the goal's frequency
+    const partialCount = goal.checkIns.filter(c => c.status === 'PARTIAL').length
+    
+    // Effort score: DONE = 100%, PARTIAL = effort/5 or 50% default
+    const effortPoints = goal.checkIns.reduce((acc, c) => {
+      if (c.status === 'DONE') return acc + 100
+      if (c.status === 'PARTIAL') return acc + (c.effort ? (c.effort * 20) : 50)
+      return acc
+    }, 0)
+
     const daysInLastMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate()
     
-    totalDone += doneCount
-    totalScheduled += daysInLastMonth // Rough estimate for now
+    totalEffort += effortPoints
+    totalScheduled += (daysInLastMonth * 100) 
 
     return {
       id: goal.id,
-      title: goal.type === 'NAMED' ? goal.title : 'Unnamed Habit',
+      title: goal.title,
       color: goal.color,
       doneCount,
-      percentage: Math.round((doneCount / daysInLastMonth) * 100)
+      partialCount,
+      percentage: Math.round(effortPoints / (daysInLastMonth)) // This gives a score relative to 100
     }
   })
 
-  const integrityScore = totalScheduled > 0 ? Math.round((totalDone / totalScheduled) * 100) : 0
-  const mostConsistent = [...goalStats].sort((a, b) => b.doneCount - a.doneCount)[0]
+  const integrityScore = totalScheduled > 0 ? Math.round((totalEffort / totalScheduled) * 100) : 0
+  const mostConsistent = [...goalStats].sort((a, b) => b.percentage - a.percentage)[0]
 
   return NextResponse.json({
     monthName: firstOfLastMonth.toLocaleString('default', { month: 'long' }),

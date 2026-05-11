@@ -12,35 +12,38 @@ model User {
   email          String?   @unique
   emailVerified  DateTime?
   image          String?
-  pinHash        String?   // Optional for OAuth users until they set one
+  pinHash        String? // Optional for OAuth users until they set one
   securityAnswer String    @default("")
   theme          String    @default("midnight")
   xp             Int       @default(0)
   level          Int       @default(1)
   createdAt      DateTime  @default(now())
 
-  accounts      Account[]
-  sessions      Session[]
-  goals         Goal[]
-  sentNudges    Nudge[]             @relation("SentNudges")
-  receivedNudges Nudge[]             @relation("ReceivedNudges")
-  sentConnections PartnerConnection[] @relation("SentConnections")
+  accounts            Account[]
+  sessions            Session[]
+  projects            Project[]
+  ownedGoals          Goal[]              @relation("OwnedGoals")
+  sharedGoals         GoalParticipant[]
+  checkIns            CheckIn[]
+  sentNudges          Nudge[]             @relation("SentNudges")
+  receivedNudges      Nudge[]             @relation("ReceivedNudges")
+  sentConnections     PartnerConnection[] @relation("SentConnections")
   receivedConnections PartnerConnection[] @relation("ReceivedConnections")
 }
 
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?  @db.Text
-  access_token       String?  @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?  @db.Text
-  session_state      String?
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -63,32 +66,73 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model Goal {
-  id           String    @id @default(cuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type         String    // "NAMED" | "UNNAMED"
-  title        String?   // Only for NAMED
-  color        String    // Hex color string
-  frequency    String    @default("DAILY") // "DAILY"|"WEEKDAYS"|"WEEKENDS"|"MON_WED_FRI"|"TUE_THU_SAT"|"WEEKLY"|"BIWEEKLY"|"MONTHLY"
-  reminderTime String?   // "HH:MM" 24h format, null = no reminder
-  isActive     Boolean   @default(true)
-  isPrivate    Boolean   @default(false)
-  createdAt    DateTime  @default(now())
+model Project {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  color       String
+  deadline    DateTime?
+  createdAt   DateTime  @default(now())
 
+  goals Goal[] // All habits and milestones for this project
+}
+
+model Goal {
+  id      String @id @default(cuid())
+  ownerId String
+  owner   User   @relation("OwnedGoals", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  title String
+  color String
+
+  category String @default("HABIT") // "HABIT" | "MILESTONE"
+
+  targetValue Int?
+  unit        String?
+
+  frequency    String  @default("DAILY") // "DAILY"|"WEEKDAYS"|"WEEKENDS"|"MON_WED_FRI"|"TUE_THU_SAT"|"WEEKLY"|"BIWEEKLY"|"MONTHLY"
+  reminderTime String? // "HH:MM" 24h format, null = no reminder
+
+  isActive  Boolean  @default(true)
+  isPrivate Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  participants GoalParticipant[]
   checkIns     CheckIn[]
 }
 
-model CheckIn {
-  id         String   @id @default(cuid())
-  goalId     String
-  goal       Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  date       String   // ISO date string "YYYY-MM-DD"
-  status     String   // "DONE" | "MISSED"
-  reflection String?  // Optional reflection or "win"
-  createdAt  DateTime @default(now())
+model GoalParticipant {
+  goalId String
+  userId String
+  goal   Goal   @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([goalId, date])
+  @@id([goalId, userId])
+}
+
+model CheckIn {
+  id     String @id @default(cuid())
+  goalId String
+  goal   Goal   @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  date String // ISO date string "YYYY-MM-DD"
+
+  status     String // "DONE" | "PARTIAL" | "MISSED"
+  value      Int? // Numeric progress
+  effort     Int? // 1-5 rating
+  reflection String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([goalId, userId, date])
 }
 
 model PartnerConnection {
@@ -97,7 +141,7 @@ model PartnerConnection {
   responderId String?
   requester   User     @relation("SentConnections", fields: [requesterId], references: [id], onDelete: Cascade)
   responder   User?    @relation("ReceivedConnections", fields: [responderId], references: [id], onDelete: Cascade)
-  status      String   // "PENDING" | "APPROVED" | "REJECTED"
+  status      String // "PENDING" | "APPROVED" | "REJECTED"
   token       String   @unique @default(cuid())
   createdAt   DateTime @default(now())
 }
@@ -108,7 +152,7 @@ model Nudge {
   receiverId String
   sender     User     @relation("SentNudges", fields: [senderId], references: [id], onDelete: Cascade)
   receiver   User     @relation("ReceivedNudges", fields: [receiverId], references: [id], onDelete: Cascade)
-  reaction   String?  // Optional emoji reaction (🔥, 💙, 🙌)
+  reaction   String? // Optional emoji reaction (🔥, 💙, 🙌)
   createdAt  DateTime @default(now())
   read       Boolean  @default(false)
 }

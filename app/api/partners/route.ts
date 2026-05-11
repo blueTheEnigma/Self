@@ -30,15 +30,6 @@ export async function POST(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const userId = (session.user as any).id
 
-  // Max 5 approved partners
-  const approved = await prisma.partnerConnection.count({
-    where: {
-      status: "APPROVED",
-      OR: [{ requesterId: userId }, { responderId: userId }],
-    },
-  })
-  if (approved >= 5) return NextResponse.json({ error: "Maximum 5 partners reached" }, { status: 429 })
-
   const connection = await prisma.partnerConnection.create({
     data: { requesterId: userId, status: "PENDING" },
   })

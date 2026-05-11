@@ -8,9 +8,9 @@ import { RecapModal } from '@/components/RecapModal'
 import { calculateStreak, today } from '@/lib/streak'
 import styles from './dashboard.module.css'
 
-interface CheckIn { id: string; goalId: string; date: string; status: string; reflection?: string }
+interface CheckIn { id: string; goalId: string; userId: string; date: string; status: string; reflection?: string; effort?: number; value?: number }
 interface Goal {
-  id: string; type: string; title: string | null; color: string
+  id: string; category: string; title: string; color: string
   frequency: string; reminderTime: string | null; checkIns: CheckIn[]
 }
 interface UserProfile { name: string; xp: number; level: number }
@@ -43,7 +43,7 @@ export default function DashboardPage() {
     }
   }, [])
 
-  const handleToggle = useCallback(async (goalId: string, status: 'DONE' | 'MISSED', reflection?: string) => {
+  const handleToggle = useCallback(async (goalId: string, status: 'DONE' | 'PARTIAL' | 'MISSED', reflection?: string, effort?: number, value?: number) => {
     const prev = goals.find(g => g.id === goalId)
     const prevStatus = prev?.checkIns.find(c => c.date === todayStr)?.status ?? null
     const prevStreak = prev ? calculateStreak(prev.checkIns) : 0
@@ -51,7 +51,7 @@ export default function DashboardPage() {
     const res = await fetch('/api/checkin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ goalId, status, date: todayStr, reflection }),
+      body: JSON.stringify({ goalId, status, date: todayStr, reflection, effort, value }),
     })
     if (!res.ok) return
     const newCheckIn: CheckIn = await res.json()
@@ -76,7 +76,7 @@ export default function DashboardPage() {
   }, [goals, todayStr])
 
   const allDone = goals.length > 0 && goals.every(g =>
-    g.checkIns.find(c => c.date === todayStr)?.status === 'DONE'
+    ['DONE', 'PARTIAL'].includes(g.checkIns.find(c => c.date === todayStr)?.status ?? '')
   )
 
   const dateLabel = new Date().toLocaleDateString('en-GB', {

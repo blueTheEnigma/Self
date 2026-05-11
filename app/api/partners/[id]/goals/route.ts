@@ -31,18 +31,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const goals = await prisma.goal.findMany({
     where: { 
-      userId: partnerId, 
+      ownerId: partnerId, 
       isActive: true,
       isPrivate: false 
     },
-    include: { checkIns: { orderBy: { date: "desc" }, take: 30 } },
+    include: { 
+      checkIns: { 
+        where: { userId: partnerId }, // Only show the partner's check-ins to the viewer
+        orderBy: { date: "desc" }, 
+        take: 30 
+      } 
+    },
     orderBy: { createdAt: "asc" },
   })
 
   // Strip title from UNNAMED goals for extra privacy if needed
   const sanitized = goals.map((g: any) => ({
     ...g,
-    title: g.type === "NAMED" ? g.title : "Daily Habit",
+    title: g.title || "Daily Habit",
   }))
 
   return NextResponse.json({ partner, goals: sanitized })

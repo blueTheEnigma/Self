@@ -13,8 +13,18 @@ export async function GET(req: NextRequest) {
   const userId = (session.user as any).id
 
   const goals = await prisma.goal.findMany({
-    where: { userId, isActive: true },
-    include: { checkIns: { orderBy: { date: "desc" }, take: 30 } },
+    where: { 
+      OR: [
+        { ownerId: userId },
+        { participants: { some: { userId } } }
+      ],
+      isActive: true 
+    },
+    include: { 
+      checkIns: { orderBy: { date: "desc" }, take: 30 },
+      participants: { include: { user: true } },
+      project: true
+    },
     orderBy: { createdAt: "asc" },
   })
 
@@ -25,31 +35,29 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  const userId = (session.user as any).id
+  const ownerId = (session.user as any).id
 
-  const { type, title, color, frequency, reminderTime, isPrivate } = await req.json()
-  if (!type || !color) return NextResponse.json({ error: "Missing fields" }, { status: 400 })
-  if (type === "NAMED" && !title?.trim())
-    return NextResponse.json({ error: "Named goals require a title" }, { status: 400 })
+  const { category, title, color, frequency, reminderTime, isPrivate, projectId, targetValue, unit } = await req.json()
+  if (!title || !color) return NextResponse.json({ error: "Missing fields" }, { status: 400 })
   if (frequency && !VALID_FREQUENCIES.includes(frequency))
     return NextResponse.json({ error: "Invalid frequency" }, { status: 400 })
   if (reminderTime && !/^\d{2}:\d{2}$/.test(reminderTime))
     return NextResponse.json({ error: "Invalid reminder time" }, { status: 400 })
 
-  const count = await prisma.goal.count({ where: { userId, isActive: true } })
-  if (count >= 10) return NextResponse.json({ error: "Maximum 10 goals reached" }, { status: 429 })
-
   const goal = await prisma.goal.create({
     data: {
-      userId,
-      type,
-      title: type === "NAMED" ? title.trim() : null,
+      ownerId,
+      projectId: projectId || null,
+      title: title.trim(),
       color,
+      category: category ?? "HABIT",
+      targetValue: targetValue ? parseInt(targetValue) : null,
+      unit: unit || null,
       frequency: frequency ?? "DAILY",
       reminderTime: reminderTime || null,
       isPrivate: !!isPrivate,
     },
-    include: { checkIns: true },
+    include: { checkIns: true, participants: true, project: true },
   })
   return NextResponse.json(goal, { status: 201 })
 }
@@ -58,13 +66,13 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  const userId = (session.user as any).id
+  const ownerId = (session.user as any).id
 
   const { id, archive, frequency, reminderTime, isPrivate } = await req.json()
   if (!id) return NextResponse.json({ error: "Missing goal id" }, { status: 400 })
 
   if (archive) {
-    await prisma.goal.updateMany({ where: { id, userId }, data: { isActive: false } })
+    await prisma.goal.updateMany({ where: { id, ownerId }, data: { isActive: false } })
     return NextResponse.json({ ok: true })
   }
 

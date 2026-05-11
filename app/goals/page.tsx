@@ -8,8 +8,8 @@ import styles from './goals.module.css';
 
 interface Goal {
   id: string;
-  type: string;
-  title: string | null;
+  category: string;
+  title: string;
   color: string;
   frequency: string;
 }
@@ -33,11 +33,13 @@ export default function GoalsDashboard() {
   const [showModal, setShowModal] = useState(false);
 
   // Form State
-  const [type, setType] = useState('NAMED');
+  const [category, setCategory] = useState('HABIT');
   const [title, setTitle] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [frequency, setFrequency] = useState('DAILY');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [targetValue, setTargetValue] = useState('');
+  const [unit, setUnit] = useState('');
 
   const fetchGoals = () => {
     fetch('/api/goals')
@@ -58,7 +60,7 @@ export default function GoalsDashboard() {
     const res = await fetch('/api/goals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, title: type === 'NAMED' ? title : null, color, frequency, isPrivate })
+      body: JSON.stringify({ category, title, color, frequency, isPrivate, targetValue, unit })
     });
     if (res.ok) {
       setShowModal(false);
@@ -100,8 +102,8 @@ export default function GoalsDashboard() {
             <div className={styles.goalInfo} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ width: 12, height: 12, borderRadius: '50%', background: goal.color }} />
               <div>
-                <h3 className={styles.goalTitle}>{goal.type === 'NAMED' ? goal.title : 'Private Goal'}</h3>
-                <p className={styles.goalFreq}>{FREQUENCIES.find(f => f.id === goal.frequency)?.label || goal.frequency}</p>
+                <h3 className={styles.goalTitle}>{goal.title}</h3>
+                <p className={styles.goalFreq}>{goal.category === 'HABIT' ? (FREQUENCIES.find(f => f.id === goal.frequency)?.label || goal.frequency) : 'Milestone'}</p>
               </div>
             </div>
             <button className="btn btn-ghost btn-sm" onClick={() => handleArchive(goal.id)}>
@@ -123,17 +125,28 @@ export default function GoalsDashboard() {
             <h2 style={{ marginBottom: 20 }}>New Goal</h2>
             <form onSubmit={handleCreate}>
               <div className="form-group">
-                <label className="label">Type</label>
-                <select className="input" value={type} onChange={e => setType(e.target.value)}>
-                  <option value="NAMED">Named Goal</option>
-                  <option value="UNNAMED">Unnamed Goal (Color Only)</option>
+                <label className="label">Category</label>
+                <select className="input" value={category} onChange={e => setCategory(e.target.value)}>
+                  <option value="HABIT">Recurring Habit</option>
+                  <option value="MILESTONE">One-time Milestone</option>
                 </select>
               </div>
 
-              {type === 'NAMED' && (
-                <div className="form-group">
-                  <label className="label">Title</label>
-                  <input className="input" type="text" required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., Read 10 pages" />
+              <div className="form-group">
+                <label className="label">Title</label>
+                <input className="input" type="text" required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., Read 10 pages" />
+              </div>
+
+              {category === 'HABIT' && (
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="label">Target (Optional)</label>
+                    <input className="input" type="number" value={targetValue} onChange={e => setTargetValue(e.target.value)} placeholder="e.g. 10" />
+                  </div>
+                  <div className="form-group" style={{ flex: 2 }}>
+                    <label className="label">Unit (Optional)</label>
+                    <input className="input" type="text" value={unit} onChange={e => setUnit(e.target.value)} placeholder="e.g. pages" />
+                  </div>
                 </div>
               )}
 

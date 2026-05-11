@@ -29,18 +29,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "You cannot accept your own invite" }, { status: 400 })
   }
 
-  // Check if responder already has 5 partners
-  const approved = await prisma.partnerConnection.count({
-    where: {
-      status: "APPROVED",
-      OR: [{ requesterId: userId }, { responderId: userId }],
-    },
-  })
-  
-  if (approved >= 5) {
-    return NextResponse.json({ error: "You have reached the maximum of 5 partners" }, { status: 429 })
-  }
-
   // Accept the connection (leaves it as PENDING for the requester to approve)
   await prisma.partnerConnection.update({
     where: { id: connection.id },

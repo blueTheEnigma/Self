@@ -11,19 +11,41 @@ export async function POST(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const userId = (session.user as any).id
 
-  const { goalId, status, date, reflection } = await req.json()
-  if (!goalId || !["DONE", "MISSED"].includes(status))
+  const { goalId, status, date, reflection, value, effort } = await req.json()
+  if (!goalId || !["DONE", "PARTIAL", "MISSED"].includes(status))
     return NextResponse.json({ error: "Invalid fields" }, { status: 400 })
 
-  // Verify goal belongs to user
-  const goal = await prisma.goal.findFirst({ where: { id: goalId, userId, isActive: true } })
+  // Verify goal belongs to user or user is a participant
+  const goal = await prisma.goal.findFirst({ 
+    where: { 
+      id: goalId, 
+      isActive: true,
+      OR: [
+        { ownerId: userId },
+        { participants: { some: { userId } } }
+      ]
+    } 
+  })
   if (!goal) return NextResponse.json({ error: "Goal not found" }, { status: 404 })
 
   const checkInDate = date || today()
   const checkIn = await prisma.checkIn.upsert({
-    where: { goalId_date: { goalId, date: checkInDate } },
-    update: { status, reflection },
-    create: { goalId, date: checkInDate, status, reflection },
+    where: { goalId_userId_date: { goalId, userId, date: checkInDate } },
+    update: { 
+      status, 
+      reflection,
+      value: value ? parseInt(value) : undefined,
+      effort: effort ? parseInt(effort) : undefined
+    },
+    create: { 
+      goalId, 
+      userId, 
+      date: checkInDate, 
+      status, 
+      reflection,
+      value: value ? parseInt(value) : undefined,
+      effort: effort ? parseInt(effort) : undefined
+    },
   })
 
   // Gamification: Add XP if status is DONE

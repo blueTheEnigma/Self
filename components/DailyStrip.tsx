@@ -20,10 +20,14 @@ export function DailyStrip({ todayStr, goals }: DailyStripProps) {
       
       // Calculate progress percentage for this day
       const activeGoals = goals.length
-      const completed = goals.filter(g => 
-        g.checkIns.find((c: any) => c.date === dateStr && c.status === 'DONE')
-      ).length
-      const progress = activeGoals > 0 ? (completed / activeGoals) * 100 : 0
+      const totalProgress = goals.reduce((acc, g) => {
+        const ci = g.checkIns.find((c: any) => c.date === dateStr)
+        if (!ci) return acc
+        if (ci.status === 'DONE') return acc + 100
+        if (ci.status === 'PARTIAL') return acc + 50
+        return acc
+      }, 0)
+      const progress = activeGoals > 0 ? (totalProgress / activeGoals) : 0
 
       list.push({ dateStr, dayName, dayNum, progress })
     }
