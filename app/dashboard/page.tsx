@@ -28,12 +28,20 @@ export default function DashboardPage() {
     // Fetch goals
     fetch('/api/goals')
       .then(r => r.json())
-      .then(data => { setGoals(Array.isArray(data) ? data : []); setLoading(false) })
+      .then(data => { 
+        if (data.error) console.error(data.error)
+        setGoals(Array.isArray(data) ? data : [])
+      })
+      .catch(err => console.error("Dashboard goals fetch error:", err))
+      .finally(() => setLoading(false))
     
     // Fetch profile for XP/Level
     fetch('/api/user')
       .then(r => r.json())
-      .then(data => setProfile(data))
+      .then(data => {
+        if (!data.error) setProfile(data)
+      })
+      .catch(err => console.error("Dashboard profile fetch error:", err))
 
     // Monthly Recap Check
     const monthKey = `recap_${new Date().getFullYear()}_${new Date().getMonth()}`
