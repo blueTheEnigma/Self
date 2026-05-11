@@ -53,17 +53,25 @@ export default function GoalsDashboard() {
     fetch('/api/goals')
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) setGoals(data);
-        setLoading(false);
-      });
+        if (data.error) {
+          console.error(data.error);
+        } else if (Array.isArray(data)) {
+          setGoals(data);
+        }
+      })
+      .catch(err => console.error("Fetch goals error:", err))
+      .finally(() => setLoading(false));
   };
 
   const fetchProjects = () => {
     fetch('/api/projects')
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) setProjects(data);
-      });
+        if (!data.error && Array.isArray(data)) {
+          setProjects(data);
+        }
+      })
+      .catch(err => console.error("Fetch projects error:", err));
   };
 
   useEffect(() => {

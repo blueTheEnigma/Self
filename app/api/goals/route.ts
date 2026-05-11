@@ -8,27 +8,32 @@ const VALID_FREQUENCIES = ["DAILY", "WEEKDAYS", "WEEKENDS", "MON_WED_FRI", "TUE_
 
 // GET /api/goals  — fetch current user's active goals with check-ins
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  const userId = (session.user as any).id
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = (session.user as any).id
 
-  const goals = await prisma.goal.findMany({
-    where: { 
-      OR: [
-        { ownerId: userId },
-        { participants: { some: { userId } } }
-      ],
-      isActive: true 
-    },
-    include: { 
-      checkIns: { orderBy: { date: "desc" }, take: 30 },
-      participants: { include: { user: true } },
-      project: true
-    },
-    orderBy: { createdAt: "asc" },
-  })
+    const goals = await prisma.goal.findMany({
+      where: { 
+        OR: [
+          { ownerId: userId },
+          { participants: { some: { userId } } }
+        ],
+        isActive: true 
+      },
+      include: { 
+        checkIns: { orderBy: { date: "desc" }, take: 30 },
+        participants: { include: { user: true } },
+        project: true
+      },
+      orderBy: { createdAt: "asc" },
+    })
 
-  return NextResponse.json(goals)
+    return NextResponse.json(goals)
+  } catch (error: any) {
+    console.error("GET /api/goals error:", error)
+    return NextResponse.json({ error: error.message || "Failed to fetch goals" }, { status: 500 })
+  }
 }
 
 // POST /api/goals  — create a new goal

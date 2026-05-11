@@ -6,22 +6,27 @@ import { prisma } from "@/lib/prisma"
 
 // GET /api/projects — fetch current user's projects with bundled goals
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  const userId = (session.user as any).id
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = (session.user as any).id
 
-  const projects = await prisma.project.findMany({
-    where: { userId },
-    include: { 
-      goals: { 
-        where: { isActive: true },
-        include: { checkIns: { orderBy: { date: "desc" }, take: 7 } }
-      } 
-    },
-    orderBy: { createdAt: "desc" },
-  })
+    const projects = await prisma.project.findMany({
+      where: { userId },
+      include: { 
+        goals: { 
+          where: { isActive: true },
+          include: { checkIns: { orderBy: { date: "desc" }, take: 7 } }
+        } 
+      },
+      orderBy: { createdAt: "desc" },
+    })
 
-  return NextResponse.json(projects)
+    return NextResponse.json(projects)
+  } catch (error: any) {
+    console.error("GET /api/projects error:", error)
+    return NextResponse.json({ error: error.message || "Failed to fetch projects" }, { status: 500 })
+  }
 }
 
 // POST /api/projects — create a new project
