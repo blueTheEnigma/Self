@@ -12,6 +12,12 @@ interface Goal {
   title: string;
   color: string;
   frequency: string;
+  projectId?: string | null;
+}
+
+interface Project {
+  id: string;
+  title: string;
 }
 
 const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#f43f5e'];
@@ -40,6 +46,8 @@ export default function GoalsDashboard() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [targetValue, setTargetValue] = useState('');
   const [unit, setUnit] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [projects, setProjects] = useState<Project[]>([]);
 
   const fetchGoals = () => {
     fetch('/api/goals')
@@ -50,9 +58,20 @@ export default function GoalsDashboard() {
       });
   };
 
+  const fetchProjects = () => {
+    fetch('/api/projects')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setProjects(data);
+      });
+  };
+
   useEffect(() => {
     if (status === 'unauthenticated') redirect('/login');
-    if (status === 'authenticated') fetchGoals();
+    if (status === 'authenticated') {
+      fetchGoals();
+      fetchProjects();
+    }
   }, [status]);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -60,7 +79,7 @@ export default function GoalsDashboard() {
     const res = await fetch('/api/goals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ category, title, color, frequency, isPrivate, targetValue, unit })
+      body: JSON.stringify({ category, title, color, frequency, isPrivate, targetValue, unit, projectId: projectId || null })
     });
     if (res.ok) {
       setShowModal(false);
@@ -155,6 +174,16 @@ export default function GoalsDashboard() {
                 <select className="input" value={frequency} onChange={e => setFrequency(e.target.value)}>
                   {FREQUENCIES.map(f => (
                     <option key={f.id} value={f.id}>{f.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="label">Link to Project (Optional)</label>
+                <select className="input" value={projectId} onChange={e => setProjectId(e.target.value)}>
+                  <option value="">No Project (Standalone)</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
                   ))}
                 </select>
               </div>

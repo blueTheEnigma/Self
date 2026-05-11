@@ -30,6 +30,15 @@ const links = [
       </svg>
     ) 
   },
+  {
+    href: '/projects',
+    label: 'Nexus',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5"/><path d="M12 12v9"/><path d="M12 12L4 7.5"/>
+      </svg>
+    )
+  },
   { 
     href: '/settings',  
     label: 'You',      
