@@ -66,9 +66,19 @@ export default function DashboardPage() {
     if (!res.ok) return
     const newCheckIn: CheckIn = await res.json()
 
-    // Refresh profile to see XP gain
+    // Gamification & Celebration
     if (status === 'DONE' && prevStatus !== 'DONE') {
+       // Refresh profile for XP
        fetch('/api/user').then(r => r.json()).then(d => setProfile(d))
+
+       // 🎉 High-fidelity celebration
+       const confetti = (await import('canvas-confetti')).default
+       confetti({
+         particleCount: 150,
+         spread: 70,
+         origin: { y: 0.6 },
+         colors: [prev?.color || '#6c9ef8', '#ffffff', '#ffd700']
+       })
     }
 
     setGoals(prev => prev.map(g => {
