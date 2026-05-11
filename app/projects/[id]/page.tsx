@@ -83,6 +83,28 @@ export default function ProjectRealm() {
     await fetch(`/api/tasks/${taskId}/toggle`, { method: 'POST' });
   };
 
+  const addPhase = async () => {
+    const title = prompt("Enter strategic phase name (e.g., 'Phase 1: Setup')");
+    if (!title) return;
+
+    const res = await fetch(`/api/projects/${id}/phases`, {
+      method: 'POST',
+      body: JSON.stringify({ title, order: project?.phases.length || 0 })
+    });
+    if (res.ok) fetchProject();
+  };
+
+  const addTask = async (phaseId: string) => {
+    const title = prompt("Enter mini-task name");
+    if (!title) return;
+
+    const res = await fetch(`/api/phases/${phaseId}/tasks`, {
+      method: 'POST',
+      body: JSON.stringify({ title, order: 0 })
+    });
+    if (res.ok) fetchProject();
+  };
+
   const overallProgress = useMemo(() => {
     if (!project?.phases.length) return 0;
     const allTasks = project.phases.flatMap(p => p.tasks);
@@ -149,7 +171,7 @@ export default function ProjectRealm() {
                     </div>
                   ))}
                   {project.canEdit && (
-                    <button className={styles.addBtn}>+ Add Mini-Task</button>
+                    <button className={styles.addBtn} onClick={() => addTask(phase.id)}>+ Add Mini-Task</button>
                   )}
                 </div>
               </div>
@@ -157,7 +179,7 @@ export default function ProjectRealm() {
           })}
           
           {project.canEdit && (
-            <button className="btn btn-ghost btn-full" style={{ borderStyle: 'dashed' }}>
+            <button className="btn btn-ghost btn-full" style={{ borderStyle: 'dashed' }} onClick={addPhase}>
               + Add Strategic Phase
             </button>
           )}

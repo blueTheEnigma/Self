@@ -133,9 +133,10 @@ model Goal {
   frequency    String  @default("DAILY") // "DAILY"|"WEEKDAYS"|"WEEKENDS"|"MON_WED_FRI"|"TUE_THU_SAT"|"WEEKLY"|"BIWEEKLY"|"MONTHLY"
   reminderTime String? // "HH:MM" 24h format, null = no reminder
 
-  isActive  Boolean  @default(true)
-  isPrivate Boolean  @default(false)
-  createdAt DateTime @default(now())
+  isActive   Boolean   @default(true)
+  isPrivate  Boolean   @default(false)
+  targetDate DateTime? // Specific deadline for MILESTONES
+  createdAt  DateTime  @default(now())
 
   participants GoalParticipant[]
   checkIns     CheckIn[]

@@ -13,6 +13,7 @@ interface Goal {
   color: string;
   frequency: string;
   projectId?: string | null;
+  targetDate?: string | null;
 }
 
 interface Project {
@@ -43,6 +44,7 @@ export default function GoalsDashboard() {
   const [title, setTitle] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [frequency, setFrequency] = useState('DAILY');
+  const [targetDate, setTargetDate] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   const [targetValue, setTargetValue] = useState('');
   const [unit, setUnit] = useState('');
@@ -87,7 +89,7 @@ export default function GoalsDashboard() {
     const res = await fetch('/api/goals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ category, title, color, frequency, isPrivate, targetValue, unit, projectId: projectId || null })
+      body: JSON.stringify({ category, title, color, frequency, isPrivate, targetValue, unit, projectId: projectId || null, targetDate: targetDate || null })
     });
     if (res.ok) {
       setShowModal(false);
@@ -130,7 +132,11 @@ export default function GoalsDashboard() {
               <div style={{ width: 12, height: 12, borderRadius: '50%', background: goal.color }} />
               <div>
                 <h3 className={styles.goalTitle}>{goal.title}</h3>
-                <p className={styles.goalFreq}>{goal.category === 'HABIT' ? (FREQUENCIES.find(f => f.id === goal.frequency)?.label || goal.frequency) : 'Milestone'}</p>
+                <p className={styles.goalFreq}>
+                  {goal.category === 'HABIT' 
+                    ? (FREQUENCIES.find(f => f.id === goal.frequency)?.label || goal.frequency) 
+                    : `Deadline: ${goal.targetDate ? new Date(goal.targetDate).toLocaleDateString() : 'No date'}`}
+                </p>
               </div>
             </div>
             <button className="btn btn-ghost btn-sm" onClick={() => handleArchive(goal.id)}>
@@ -177,14 +183,21 @@ export default function GoalsDashboard() {
                 </div>
               )}
 
-              <div className="form-group">
-                <label className="label">Frequency</label>
-                <select className="input" value={frequency} onChange={e => setFrequency(e.target.value)}>
-                  {FREQUENCIES.map(f => (
-                    <option key={f.id} value={f.id}>{f.label}</option>
-                  ))}
-                </select>
-              </div>
+              {category === 'HABIT' ? (
+                <div className="form-group">
+                  <label className="label">Frequency</label>
+                  <select className="input" value={frequency} onChange={e => setFrequency(e.target.value)}>
+                    {FREQUENCIES.map(f => (
+                      <option key={f.id} value={f.id}>{f.label}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label className="label">Target End Date</label>
+                  <input className="input" type="date" required value={targetDate} onChange={e => setTargetDate(e.target.value)} />
+                </div>
+              )}
 
               <div className="form-group">
                 <label className="label">Link to Project (Optional)</label>

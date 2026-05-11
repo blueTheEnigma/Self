@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const ownerId = (session.user as any).id
 
-  const { category, title, color, frequency, reminderTime, isPrivate, projectId, targetValue, unit } = await req.json()
+  const { category, title, color, frequency, reminderTime, isPrivate, projectId, targetValue, unit, targetDate } = await req.json()
   if (!title || !color) return NextResponse.json({ error: "Missing fields" }, { status: 400 })
   if (frequency && !VALID_FREQUENCIES.includes(frequency))
     return NextResponse.json({ error: "Invalid frequency" }, { status: 400 })
@@ -58,9 +58,10 @@ export async function POST(req: NextRequest) {
       category: category ?? "HABIT",
       targetValue: targetValue ? parseInt(targetValue) : null,
       unit: unit || null,
-      frequency: frequency ?? "DAILY",
+      frequency: category === 'MILESTONE' ? "DAILY" : (frequency ?? "DAILY"),
       reminderTime: reminderTime || null,
       isPrivate: !!isPrivate,
+      targetDate: targetDate ? new Date(targetDate) : null,
     },
     include: { checkIns: true, participants: true, project: true },
   })
