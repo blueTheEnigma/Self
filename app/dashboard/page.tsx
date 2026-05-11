@@ -5,6 +5,8 @@ import { NavBar } from '@/components/NavBar'
 import { GoalRing } from '@/components/GoalRing'
 import { DailyStrip } from '@/components/DailyStrip'
 import { RecapModal } from '@/components/RecapModal'
+import { MomentumFeed } from '@/components/MomentumFeed'
+import { EffortHeatmap } from '@/components/EffortHeatmap'
 import { calculateStreak, today } from '@/lib/streak'
 import styles from './dashboard.module.css'
 
@@ -114,6 +116,8 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+      
+      <MomentumFeed />
 
       <DailyStrip todayStr={todayStr} goals={goals} />
 
@@ -149,6 +153,8 @@ export default function DashboardPage() {
           })}
         </div>
       )}
+
+      <EffortHeatmap />
 
       <NavBar />
     </div>

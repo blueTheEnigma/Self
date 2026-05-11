@@ -54,5 +54,29 @@ export async function POST(req: NextRequest) {
     await addXP(userId, 10)
   }
 
+  // Broadcast to partners for Momentum Feed (only if not private)
+  if (!goal.isPrivate) {
+    const { sendSSEEvent } = await import("@/lib/sse")
+    const partners = await prisma.partnerConnection.findMany({
+      where: {
+        status: "APPROVED",
+        OR: [{ requesterId: userId }, { responderId: userId }]
+      }
+    })
+
+    const partnerIds = partners.map(p => p.requesterId === userId ? p.responderId : p.requesterId)
+    const eventData = {
+      userId,
+      userName: (session.user as any).name || "A partner",
+      goalTitle: goal.title,
+      status,
+      effort
+    }
+
+    partnerIds.forEach(id => {
+      if (id) sendSSEEvent(id, "momentum", eventData)
+    })
+  }
+
   return NextResponse.json(checkIn)
 }
