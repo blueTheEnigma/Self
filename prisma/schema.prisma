@@ -29,6 +29,7 @@ model User {
   receivedNudges      Nudge[]             @relation("ReceivedNudges")
   sentConnections     PartnerConnection[] @relation("SentConnections")
   receivedConnections PartnerConnection[] @relation("ReceivedConnections")
+  projectParticipation ProjectParticipant[]
 }
 
 model Account {
@@ -76,7 +77,41 @@ model Project {
   deadline    DateTime?
   createdAt   DateTime  @default(now())
 
-  goals Goal[] // All habits and milestones for this project
+  goals        Goal[]               // Habits/Milestones linked to this project
+  phases       ProjectPhase[]       // Strategic phases
+  participants ProjectParticipant[] // Collaborators
+}
+
+model ProjectPhase {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  tasks ProjectTask[]
+}
+
+model ProjectTask {
+  id          String   @id @default(cuid())
+  phaseId     String
+  phase       ProjectPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  title       String
+  isCompleted Boolean  @default(false)
+  order       Int      @default(0)
+  assignedTo  String?  // Optional: User ID assigned to this task
+  createdAt   DateTime @default(now())
+}
+
+model ProjectParticipant {
+  projectId String
+  userId    String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String  @default("VIEWER") // "VIEWER" | "EDITOR"
+
+  @@id([projectId, userId])
 }
 
 model Goal {

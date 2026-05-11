@@ -13,11 +13,11 @@ export async function GET(req: NextRequest) {
 
     const projects = await prisma.project.findMany({
       where: { userId },
-      include: { 
-        goals: { 
+      include: {
+        goals: {
           where: { isActive: true },
           include: { checkIns: { orderBy: { date: "desc" }, take: 7 } }
-        } 
+        }
       },
       orderBy: { createdAt: "desc" },
     })

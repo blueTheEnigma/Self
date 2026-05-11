@@ -5,6 +5,11 @@
   padding-bottom: 40px;
 }
 
+.projectsGrid a {
+  text-decoration: none;
+  display: block;
+}
+
 .projectCard {
   position: relative;
   overflow: hidden;

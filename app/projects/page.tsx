@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { NavBar } from '@/components/NavBar';
 import styles from './projects.module.css';
 
@@ -102,7 +103,7 @@ export default function ProjectsPage() {
           const offset = circumference - (progress / 100) * circumference;
 
           return (
-            <div key={project.id} className={`${styles.projectCard} card-elevated`} style={{ '--project-color': project.color } as any}>
+            <Link href={`/projects/${project.id}`} key={project.id} className={`${styles.projectCard} card-elevated`} style={{ '--project-color': project.color } as any}>
               <div className={styles.projectHeader}>
                 <div style={{ flex: 1 }}>
                   <h2 className={styles.projectTitle}>{project.title}</h2>
@@ -136,7 +137,7 @@ export default function ProjectsPage() {
                 ))}
                 {project.goals.length === 0 && <p style={{ fontSize: 11, opacity: 0.5 }}>No activities linked yet.</p>}
               </div>
-            </div>
+            </Link>
           );
         })}
 
