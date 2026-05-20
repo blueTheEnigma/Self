@@ -30,6 +30,7 @@ model User {
   sentConnections     PartnerConnection[] @relation("SentConnections")
   receivedConnections PartnerConnection[] @relation("ReceivedConnections")
   projectParticipation ProjectParticipant[]
+  journalEntries      JournalEntry[]
 }
 
 model Account {
@@ -101,6 +102,7 @@ model ProjectTask {
   isCompleted Boolean  @default(false)
   order       Int      @default(0)
   assignedTo  String?  // Optional: User ID assigned to this task
+  deadline    DateTime?
   createdAt   DateTime @default(now())
 }
 
@@ -191,4 +193,14 @@ model Nudge {
   reaction   String? // Optional emoji reaction (🔥, 💙, 🙌)
   createdAt  DateTime @default(now())
   read       Boolean  @default(false)
+}
+
+model JournalEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

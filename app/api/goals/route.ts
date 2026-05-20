@@ -68,26 +68,37 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(goal, { status: 201 })
 }
 
-// PATCH /api/goals  — archive a goal OR update its frequency/reminder/privacy
+// PATCH /api/goals  — archive a goal OR update its details
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const ownerId = (session.user as any).id
 
-  const { id, archive, frequency, reminderTime, isPrivate } = await req.json()
+  const { id, archive, title, color, category, targetValue, unit, targetDate, projectId, frequency, reminderTime, isPrivate } = await req.json()
   if (!id) return NextResponse.json({ error: "Missing goal id" }, { status: 400 })
 
+  const goal = await prisma.goal.findFirst({ where: { id, ownerId } })
+  if (!goal) return NextResponse.json({ error: "Goal not found or unauthorized" }, { status: 404 })
+
   if (archive) {
-    await prisma.goal.updateMany({ where: { id, ownerId }, data: { isActive: false } })
+    await prisma.goal.update({ where: { id }, data: { isActive: false } })
     return NextResponse.json({ ok: true })
   }
 
-  // Update frequency / reminderTime / privacy
+  // Update details
   const data: any = {}
+  if (title !== undefined) data.title = title.trim()
+  if (color !== undefined) data.color = color
+  if (category !== undefined) data.category = category
+  if (targetValue !== undefined) data.targetValue = targetValue ? parseInt(targetValue) : null
+  if (unit !== undefined) data.unit = unit || null
+  if (targetDate !== undefined) data.targetDate = targetDate ? new Date(targetDate) : null
+  if (projectId !== undefined) data.projectId = projectId || null
+
   if (frequency !== undefined) {
-    if (!VALID_FREQUENCIES.includes(frequency))
+    if (frequency && !VALID_FREQUENCIES.includes(frequency))
       return NextResponse.json({ error: "Invalid frequency" }, { status: 400 })
-    data.frequency = frequency
+    data.frequency = frequency || "DAILY"
   }
   if (reminderTime !== undefined) {
     if (reminderTime && !/^\d{2}:\d{2}$/.test(reminderTime))

@@ -14,6 +14,9 @@ interface Goal {
   frequency: string;
   projectId?: string | null;
   targetDate?: string | null;
+  isPrivate?: boolean;
+  targetValue?: number | null;
+  unit?: string | null;
 }
 
 interface Project {
@@ -38,6 +41,7 @@ export default function GoalsDashboard() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
 
   // Form State
   const [category, setCategory] = useState('HABIT');
@@ -84,21 +88,67 @@ export default function GoalsDashboard() {
     }
   }, [status]);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const resetForm = () => {
+    setCategory('HABIT');
+    setTitle('');
+    setColor(COLORS[0]);
+    setFrequency('DAILY');
+    setTargetDate('');
+    setIsPrivate(false);
+    setTargetValue('');
+    setUnit('');
+    setProjectId('');
+  };
+
+  const handleOpenCreate = () => {
+    setEditingGoal(null);
+    resetForm();
+    setShowModal(true);
+  };
+
+  const handleEdit = (goal: Goal) => {
+    setEditingGoal(goal);
+    setCategory(goal.category);
+    setTitle(goal.title);
+    setColor(goal.color);
+    setFrequency(goal.frequency || 'DAILY');
+    setTargetDate(goal.targetDate ? goal.targetDate.split('T')[0] : '');
+    setIsPrivate(!!goal.isPrivate);
+    setTargetValue(goal.targetValue?.toString() || '');
+    setUnit(goal.unit || '');
+    setProjectId(goal.projectId || '');
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const body = {
+      id: editingGoal?.id,
+      category,
+      title,
+      color,
+      frequency,
+      isPrivate,
+      targetValue,
+      unit,
+      projectId: projectId || null,
+      targetDate: targetDate || null
+    };
+
     const res = await fetch('/api/goals', {
-      method: 'POST',
+      method: editingGoal ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ category, title, color, frequency, isPrivate, targetValue, unit, projectId: projectId || null, targetDate: targetDate || null })
+      body: JSON.stringify(body)
     });
+
     if (res.ok) {
       setShowModal(false);
-      setTitle('');
-      setIsPrivate(false);
+      setEditingGoal(null);
+      resetForm();
       fetchGoals();
     } else {
       const err = await res.json();
-      alert(err.error || 'Failed to create goal');
+      alert(err.error || `Failed to ${editingGoal ? 'update' : 'create'} goal`);
     }
   };
 
@@ -120,7 +170,7 @@ export default function GoalsDashboard() {
         <div>
           <h1 className="page-title">Goals</h1>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+        <button className="btn btn-primary" onClick={handleOpenCreate}>
           + Add
         </button>
       </header>
@@ -139,9 +189,14 @@ export default function GoalsDashboard() {
                 </p>
               </div>
             </div>
-            <button className="btn btn-ghost btn-sm" onClick={() => handleArchive(goal.id)}>
-              Archive
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => handleEdit(goal)}>
+                Edit
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => handleArchive(goal.id)}>
+                Archive
+              </button>
+            </div>
           </div>
         ))}
 
@@ -155,8 +210,8 @@ export default function GoalsDashboard() {
       {showModal && (
         <div className={styles.modalOverlay}>
           <div className="card-elevated" style={{ width: '100%', maxWidth: 400 }}>
-            <h2 style={{ marginBottom: 20 }}>New Goal</h2>
-            <form onSubmit={handleCreate}>
+            <h2 style={{ marginBottom: 20 }}>{editingGoal ? 'Edit Goal' : 'New Goal'}</h2>
+            <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label className="label">Category</label>
                 <select className="input" value={category} onChange={e => setCategory(e.target.value)}>
@@ -233,7 +288,7 @@ export default function GoalsDashboard() {
               </div>
 
               <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-                <button type="button" onClick={() => setShowModal(false)} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
+                <button type="button" onClick={() => { setShowModal(false); setEditingGoal(null); }} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save</button>
               </div>
             </form>

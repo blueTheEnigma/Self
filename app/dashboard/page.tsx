@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import { NavBar } from '@/components/NavBar'
 import { GoalRing } from '@/components/GoalRing'
 import { DailyStrip } from '@/components/DailyStrip'
@@ -125,6 +126,28 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+      </div>
+      
+      {/* Quick Access to Journal and Alerts */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24, marginTop: -12 }}>
+        <Link href="/journal" style={{
+          flex: 1, textDecoration: 'none', background: 'var(--bg-surface)', 
+          border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+          padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--text-2)',
+          transition: 'all 0.2s', cursor: 'pointer', textAlign: 'center'
+        }}>
+          📝 Reflect in Journal
+        </Link>
+        <Link href="/alerts" style={{
+          flex: 1, textDecoration: 'none', background: 'var(--bg-surface)', 
+          border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+          padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--text-2)',
+          transition: 'all 0.2s', cursor: 'pointer', textAlign: 'center'
+        }}>
+          🔔 Deadline Alerts
+        </Link>
       </div>
       
       <MomentumFeed />
