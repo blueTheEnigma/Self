@@ -31,6 +31,9 @@ model User {
   receivedConnections PartnerConnection[] @relation("ReceivedConnections")
   projectParticipation ProjectParticipant[]
   journalEntries      JournalEntry[]
+  financeAccounts     FinanceAccount[]
+  financeBudgets      FinanceBudget[]
+  financeGoals        FinanceGoal[]
 }
 
 model Account {
@@ -203,4 +206,63 @@ model JournalEntry {
   content   String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model FinanceAccount {
+  id           String               @id @default(cuid())
+  userId       String
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  currency     String               // "NGN" | "USD" | "ADA"
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  transactions FinanceTransaction[]
+
+  @@index([userId])
+}
+
+model FinanceTransaction {
+  id                 String          @id // Client-generated UUID
+  userId             String
+  accountId          String
+  account            FinanceAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  amount             Float           // Negative for expense, positive for income
+  type               String          // "INCOME" | "EXPENSE" | "TRANSFER"
+  category           String          // e.g. "Food & Feeding", "Transport", "Gifts"
+  note               String?
+  date               DateTime
+  recipientAccountId String?         // Optional (for transfers)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([accountId])
+}
+
+model FinanceBudget {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  String
+  limit     Float
+  currency  String   // e.g. "NGN"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, category, currency])
+}
+
+model FinanceGoal {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  targetAmount Float
+  savedAmount  Float     @default(0)
+  currency     String    // e.g. "NGN"
+  targetDate   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId])
 }

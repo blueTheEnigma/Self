@@ -1,9 +1,10 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { SessionProvider } from 'next-auth/react'
 import { SSEListener } from './SSEListener'
 import { Toast } from './Toast'
 import { ReminderChecker } from './ReminderChecker'
+import { SyncStoreProvider } from '@/lib/syncStore'
 
 interface ToastItem {
   id: string
@@ -13,6 +14,14 @@ interface ToastItem {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('[Service Worker] Registered with scope:', reg.scope))
+        .catch(err => console.error('[Service Worker] Registration failed:', err))
+    }
+  }, [])
 
   const addToast = useCallback((t: ToastItem) => {
     setToasts(prev => [...prev, t])
@@ -34,15 +43,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <SessionProvider>
-      <SSEListener onNudge={handleNudge} />
-      <ReminderChecker onReminder={handleReminder} />
-      {children}
-      <div className="toast-container">
-        {toasts.map(t => (
-          <Toast key={t.id} message={t.message} type={t.type}
-            onClose={() => setToasts(prev => prev.filter(x => x.id !== t.id))} />
-        ))}
-      </div>
+      <SyncStoreProvider>
+        <SSEListener onNudge={handleNudge} />
+        <ReminderChecker onReminder={handleReminder} />
+        {children}
+        <div className="toast-container">
+          {toasts.map(t => (
+            <Toast key={t.id} message={t.message} type={t.type}
+              onClose={() => setToasts(prev => prev.filter(x => x.id !== t.id))} />
+          ))}
+        </div>
+      </SyncStoreProvider>
     </SessionProvider>
   )
 }
