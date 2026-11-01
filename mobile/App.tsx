@@ -66,6 +66,7 @@ export default function App() {
 
   // 5 Dedicated Bottom Tabs (Vault & Stats Separated)
   const [activeNavTab, setActiveNavTab] = useState<NavTabId>('today');
+  const [statsViewMode, setStatsViewMode] = useState<'daily' | 'weekly'>('daily');
 
   // Modals state
   const [showSpendModal, setShowSpendModal] = useState(false);
@@ -189,6 +190,23 @@ export default function App() {
   const todayTransactions = appState.transactions.filter(t => t.timestamp.startsWith(todayStr));
   const todaySpent = todayTransactions.reduce((acc, t) => acc + t.amount, 0);
   const isRunningDay = isRunDay();
+
+  // Executive Daily & Weekly Calculations
+  const totalFocusMinutesToday = appState.focusBlocks.reduce((acc, b) => acc + b.durationMinutes, 0);
+  const setsDoneCount = appState.workout.exercises.reduce((acc, ex) => acc + ex.completedSets.filter(s => s > 0).length, 0);
+  const totalSetsTarget = appState.workout.exercises.length * 3;
+  const waterPercent = Math.min(Math.round((appState.integrity.waterMl / appState.integrity.waterGoalMl) * 100), 100);
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const weeklyTransactions = appState.transactions.filter(t => new Date(t.timestamp) >= sevenDaysAgo);
+  const weeklyTotalSpent = weeklyTransactions.reduce((acc, t) => acc + t.amount, 0);
+  const weeklyFocusBlocks = appState.focusBlocks.filter(b => new Date(b.timestamp) >= sevenDaysAgo);
+  const weeklyFocusMinutes = weeklyFocusBlocks.reduce((acc, b) => acc + b.durationMinutes, 0);
+
+  const prevMetric = appState.bodyMetricsHistory.length > 1 ? appState.bodyMetricsHistory[1] : null;
+  const weightDelta = prevMetric ? (appState.bodyWeightKg - prevMetric.weightKg).toFixed(1) : null;
+  const waistDelta = prevMetric ? (appState.waistCircumferenceCm - prevMetric.waistCm).toFixed(1) : null;
+  const tummyDelta = prevMetric ? (appState.tummyCircumferenceCm - prevMetric.tummyCm).toFixed(1) : null;
 
   return (
     <SafeAreaProvider>
@@ -754,113 +772,304 @@ export default function App() {
                 <View style={styles.tabBannerHeader}>
                   <View>
                     <Text style={styles.tabBannerTitle}>STATS & MIRROR</Text>
-                    <Text style={styles.tabBannerSubtitle}>Physical Trends, Financial Ledger & Analytics</Text>
+                    <Text style={styles.tabBannerSubtitle}>Quantified Self: Daily Pulse & 7-Day Sabbath Review</Text>
                   </View>
                 </View>
 
-                {/* 1. Weekly Body Composition & Left Ankle Status */}
-                <TouchableOpacity 
-                  style={styles.contentCard}
-                  onPress={() => {
-                    safeHaptics.light();
-                    setShowBodyModal(true);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.cardHeaderRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Ionicons name="scale-outline" size={18} color={Colors.primary} />
-                      <Text style={styles.contentCardTitle}>Body Composition & Ankle</Text>
-                    </View>
-                    <Text style={styles.cardActionLink}>Log Audit ➔</Text>
-                  </View>
-
-                  <View style={styles.statsSummaryGrid}>
-                    <View style={styles.statMetricItem}>
-                      <Text style={styles.statMetricValue}>{appState.bodyWeightKg} kg</Text>
-                      <Text style={styles.statMetricLabel}>Weight</Text>
-                    </View>
-                    <View style={styles.statMetricItem}>
-                      <Text style={styles.statMetricValue}>{appState.waistCircumferenceCm} cm</Text>
-                      <Text style={styles.statMetricLabel}>Waist</Text>
-                    </View>
-                    <View style={styles.statMetricItem}>
-                      <Text style={styles.statMetricValue}>{appState.tummyCircumferenceCm} cm</Text>
-                      <Text style={styles.statMetricLabel}>Tummy</Text>
-                    </View>
-                    <View style={styles.statMetricItem}>
-                      <Text style={[styles.statMetricValue, { color: Colors.amber }]}>
-                        Level {appState.anklePainRating}
-                      </Text>
-                      <Text style={styles.statMetricLabel}>Ankle Strain</Text>
-                    </View>
-                  </View>
-
-                  {/* History Preview */}
-                  {appState.bodyMetricsHistory.length > 1 && (
-                    <View style={{ marginTop: Spacing.sm, borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: Spacing.xs }}>
-                      <Text style={styles.subCardHeader}>PREVIOUS AUDIT ({appState.bodyMetricsHistory[1].date})</Text>
-                      <Text style={styles.cardDescriptionText}>
-                        {appState.bodyMetricsHistory[1].weightKg}kg • {appState.bodyMetricsHistory[1].waistCm}cm waist • {appState.bodyMetricsHistory[1].tummyCm}cm tummy
-                      </Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-
-                {/* 2. Financial Expense Ledger */}
-                <View style={styles.contentCard}>
-                  <View style={styles.cardHeaderRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Ionicons name="wallet-outline" size={18} color={Colors.primary} />
-                      <Text style={styles.contentCardTitle}>Today's Expense Ledger</Text>
-                    </View>
-                    <Text style={[styles.contentCardTitle, { color: Colors.primary }]}>
-                      ₦{todaySpent.toLocaleString()}
-                    </Text>
-                  </View>
-
-                  {todayTransactions.length === 0 ? (
-                    <Text style={[styles.cardDescriptionText, { fontStyle: 'italic', marginVertical: Spacing.sm }]}>
-                      No expenses recorded yet today.
-                    </Text>
-                  ) : (
-                    <View style={styles.ledgerList}>
-                      {todayTransactions.map(tx => {
-                        const timeStr = new Date(tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        return (
-                          <View key={tx.id} style={styles.ledgerRow}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <Text style={styles.ledgerCategory}>{tx.category}</Text>
-                              <Text style={styles.ledgerTime}>{timeStr}</Text>
-                            </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                              <Text style={styles.ledgerAmount}>₦{tx.amount.toLocaleString()}</Text>
-                              <TouchableOpacity 
-                                onPress={() => {
-                                  safeHaptics.warning();
-                                  handleDeleteSpend(tx.id);
-                                }}
-                              >
-                                <Ionicons name="trash-outline" size={15} color={Colors.ruby} />
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                        );
-                      })}
-                    </View>
-                  )}
-
-                  <TouchableOpacity 
-                    style={styles.outlineActionButton}
+                {/* Segmented Daily / Weekly Selector */}
+                <View style={styles.statsSegmentContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.statsSegmentButton,
+                      statsViewMode === 'daily' && styles.statsSegmentButtonActive,
+                    ]}
                     onPress={() => {
                       safeHaptics.light();
-                      setShowSpendModal(true);
+                      setStatsViewMode('daily');
                     }}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.outlineActionText}>+ Log Expense with NumPad</Text>
+                    <Ionicons 
+                      name="today-outline" 
+                      size={15} 
+                      color={statsViewMode === 'daily' ? Colors.primary : Colors.textMuted} 
+                    />
+                    <Text style={[
+                      styles.statsSegmentText,
+                      statsViewMode === 'daily' && styles.statsSegmentTextActive,
+                    ]}>
+                      Daily Rundown
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.statsSegmentButton,
+                      statsViewMode === 'weekly' && styles.statsSegmentButtonActive,
+                    ]}
+                    onPress={() => {
+                      safeHaptics.light();
+                      setStatsViewMode('weekly');
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons 
+                      name="calendar-outline" 
+                      size={15} 
+                      color={statsViewMode === 'weekly' ? Colors.primary : Colors.textMuted} 
+                    />
+                    <Text style={[
+                      styles.statsSegmentText,
+                      statsViewMode === 'weekly' && styles.statsSegmentTextActive,
+                    ]}>
+                      Weekly Review
+                    </Text>
                   </TouchableOpacity>
                 </View>
+
+                {/* VIEW 1: DAILY RUNDOWN */}
+                {statsViewMode === 'daily' && (
+                  <View style={{ gap: 12 }}>
+                    {/* Executive Daily Matrix Card */}
+                    <View style={styles.contentCard}>
+                      <View style={styles.cardHeaderRow}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="flash-outline" size={18} color={Colors.primary} />
+                          <Text style={styles.contentCardTitle}>Today's Executive Rundown</Text>
+                        </View>
+                        <View style={styles.goldenZonePill}>
+                          <Text style={styles.goldenZoneText}>Live Pulse</Text>
+                        </View>
+                      </View>
+
+                      {/* 6-Pillar Summary Grid */}
+                      <View style={styles.rundownGrid}>
+                        {/* 1. Hydration */}
+                        <View style={styles.rundownGridItem}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="water-outline" size={15} color={Colors.primary} />
+                            <Text style={styles.rundownItemLabel}>Hydration</Text>
+                          </View>
+                          <Text style={styles.rundownItemValue}>{appState.integrity.waterMl} ml</Text>
+                          <Text style={styles.rundownItemSub}>{waterPercent}% of 3L goal</Text>
+                        </View>
+
+                        {/* 2. Purity & Shield */}
+                        <View style={styles.rundownGridItem}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="shield-checkmark-outline" size={15} color={Colors.primary} />
+                            <Text style={styles.rundownItemLabel}>Integrity</Text>
+                          </View>
+                          <Text style={styles.rundownItemValue}>Day {appState.integrity.purityStreakDays} Clean</Text>
+                          <Text style={styles.rundownItemSub}>{appState.integrity.urgeDivertedCount} Urges Defeated</Text>
+                        </View>
+
+                        {/* 3. Satiety */}
+                        <View style={styles.rundownGridItem}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="restaurant-outline" size={15} color={Colors.primary} />
+                            <Text style={styles.rundownItemLabel}>Satiety</Text>
+                          </View>
+                          <Text style={styles.rundownItemValue}>Zone 3 (80%)</Text>
+                          <Text style={styles.rundownItemSub}>{appState.integrity.fullnessLogs.length}/3 Meals Audited</Text>
+                        </View>
+
+                        {/* 4. Deep Work */}
+                        <View style={styles.rundownGridItem}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="timer-outline" size={15} color={Colors.primary} />
+                            <Text style={styles.rundownItemLabel}>Deep Focus</Text>
+                          </View>
+                          <Text style={styles.rundownItemValue}>{totalFocusMinutesToday} mins</Text>
+                          <Text style={styles.rundownItemSub}>{appState.focusBlocks.length} Sessions Done</Text>
+                        </View>
+
+                        {/* 5. Movement */}
+                        <View style={styles.rundownGridItem}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="barbell-outline" size={15} color={Colors.primary} />
+                            <Text style={styles.rundownItemLabel}>Movement</Text>
+                          </View>
+                          <Text style={styles.rundownItemValue}>
+                            {appState.workout.completed ? 'Complete ✓' : `${setsDoneCount}/${totalSetsTarget} Sets`}
+                          </Text>
+                          <Text style={styles.rundownItemSub}>
+                            {isRunningDay ? '2.5km Run Day' : 'Recovery & Prehab'}
+                          </Text>
+                        </View>
+
+                        {/* 6. Sanctuary */}
+                        <View style={styles.rundownGridItem}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="musical-notes-outline" size={15} color={Colors.primary} />
+                            <Text style={styles.rundownItemLabel}>Sanctuary</Text>
+                          </View>
+                          <Text style={styles.rundownItemValue}>{appState.sanctuary.guitarMinutesToday} mins</Text>
+                          <Text style={styles.rundownItemSub}>Acoustic Guitar</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Today's Expense Ledger */}
+                    <View style={styles.contentCard}>
+                      <View style={styles.cardHeaderRow}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="wallet-outline" size={18} color={Colors.primary} />
+                          <Text style={styles.contentCardTitle}>Today's Expense Ledger</Text>
+                        </View>
+                        <Text style={[styles.contentCardTitle, { color: Colors.primary }]}>
+                          ₦{todaySpent.toLocaleString()}
+                        </Text>
+                      </View>
+
+                      {todayTransactions.length === 0 ? (
+                        <Text style={[styles.cardDescriptionText, { fontStyle: 'italic', marginVertical: Spacing.sm }]}>
+                          No expenses recorded yet today.
+                        </Text>
+                      ) : (
+                        <View style={styles.ledgerList}>
+                          {todayTransactions.map(tx => {
+                            const timeStr = new Date(tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            return (
+                              <View key={tx.id} style={styles.ledgerRow}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                  <Text style={styles.ledgerCategory}>{tx.category}</Text>
+                                  <Text style={styles.ledgerTime}>{timeStr}</Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                  <Text style={styles.ledgerAmount}>₦{tx.amount.toLocaleString()}</Text>
+                                  <TouchableOpacity 
+                                    onPress={() => {
+                                      safeHaptics.warning();
+                                      handleDeleteSpend(tx.id);
+                                    }}
+                                  >
+                                    <Ionicons name="trash-outline" size={15} color={Colors.ruby} />
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )}
+
+                      <TouchableOpacity 
+                        style={styles.outlineActionButton}
+                        onPress={() => {
+                          safeHaptics.light();
+                          setShowSpendModal(true);
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.outlineActionText}>+ Log Expense with NumPad</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* VIEW 2: WEEKLY REVIEW */}
+                {statsViewMode === 'weekly' && (
+                  <View style={{ gap: 12 }}>
+                    {/* Weekly Body Composition & Ankle Prehab Audit */}
+                    <TouchableOpacity 
+                      style={styles.contentCard}
+                      onPress={() => {
+                        safeHaptics.light();
+                        setShowBodyModal(true);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.cardHeaderRow}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="scale-outline" size={18} color={Colors.primary} />
+                          <Text style={styles.contentCardTitle}>Sunday Sabbath Physical Audit</Text>
+                        </View>
+                        <Text style={styles.cardActionLink}>Log Audit ➔</Text>
+                      </View>
+
+                      <View style={styles.statsSummaryGrid}>
+                        <View style={styles.statMetricItem}>
+                          <Text style={styles.statMetricValue}>{appState.bodyWeightKg} kg</Text>
+                          <Text style={styles.statMetricLabel}>Weight</Text>
+                          {weightDelta && (
+                            <Text style={[styles.deltaText, Number(weightDelta) <= 0 ? styles.deltaGood : styles.deltaWarn]}>
+                              {Number(weightDelta) > 0 ? `+${weightDelta}` : weightDelta} kg
+                            </Text>
+                          )}
+                        </View>
+
+                        <View style={styles.statMetricItem}>
+                          <Text style={styles.statMetricValue}>{appState.waistCircumferenceCm} cm</Text>
+                          <Text style={styles.statMetricLabel}>Waist</Text>
+                          {waistDelta && (
+                            <Text style={[styles.deltaText, Number(waistDelta) <= 0 ? styles.deltaGood : styles.deltaWarn]}>
+                              {Number(waistDelta) > 0 ? `+${waistDelta}` : waistDelta} cm
+                            </Text>
+                          )}
+                        </View>
+
+                        <View style={styles.statMetricItem}>
+                          <Text style={styles.statMetricValue}>{appState.tummyCircumferenceCm} cm</Text>
+                          <Text style={styles.statMetricLabel}>Tummy</Text>
+                          {tummyDelta && (
+                            <Text style={[styles.deltaText, Number(tummyDelta) <= 0 ? styles.deltaGood : styles.deltaWarn]}>
+                              {Number(tummyDelta) > 0 ? `+${tummyDelta}` : tummyDelta} cm
+                            </Text>
+                          )}
+                        </View>
+
+                        <View style={styles.statMetricItem}>
+                          <Text style={[styles.statMetricValue, { color: Colors.amber }]}>
+                            Level {appState.anklePainRating}
+                          </Text>
+                          <Text style={styles.statMetricLabel}>Ankle Strain</Text>
+                          <Text style={styles.deltaNeutral}>Target: 0/5</Text>
+                        </View>
+                      </View>
+
+                      {appState.bodyMetricsHistory.length > 1 && (
+                        <View style={{ marginTop: Spacing.sm, borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: Spacing.xs }}>
+                          <Text style={styles.subCardHeader}>PREVIOUS AUDIT ({appState.bodyMetricsHistory[1].date})</Text>
+                          <Text style={styles.cardDescriptionText}>
+                            {appState.bodyMetricsHistory[1].weightKg}kg • {appState.bodyMetricsHistory[1].waistCm}cm waist • {appState.bodyMetricsHistory[1].tummyCm}cm tummy
+                          </Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+
+                    {/* 7-Day Cumulative Volume & Discipline */}
+                    <View style={styles.contentCard}>
+                      <View style={styles.cardHeaderRow}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="analytics-outline" size={18} color={Colors.primary} />
+                          <Text style={styles.contentCardTitle}>7-Day Cumulative Progress</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.weeklyDisciplineRow}>
+                        <View style={styles.disciplineStatBox}>
+                          <Text style={styles.disciplineValue}>{(weeklyFocusMinutes / 60).toFixed(1)} hrs</Text>
+                          <Text style={styles.disciplineLabel}>Deep Work (7 Days)</Text>
+                        </View>
+                        <View style={styles.disciplineStatBox}>
+                          <Text style={styles.disciplineValue}>₦{weeklyTotalSpent.toLocaleString()}</Text>
+                          <Text style={styles.disciplineLabel}>Total Spending</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.weeklyDisciplineRow}>
+                        <View style={styles.disciplineStatBox}>
+                          <Text style={styles.disciplineValue}>{appState.integrity.consecutiveControlledSatietyDays}/14 Days</Text>
+                          <Text style={styles.disciplineLabel}>Satiety Streak</Text>
+                        </View>
+                        <View style={styles.disciplineStatBox}>
+                          <Text style={styles.disciplineValue}>{appState.integrity.purityStreakDays} Days</Text>
+                          <Text style={styles.disciplineLabel}>Purity Shield</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                )}
               </View>
             )}
 
@@ -1523,5 +1732,112 @@ const styles = StyleSheet.create({
   ledgerAmount: {
     ...Typography.callout,
     fontWeight: '600',
+  },
+  statsSegmentContainer: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    padding: 3,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 4,
+  },
+  statsSegmentButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.sm,
+  },
+  statsSegmentButtonActive: {
+    backgroundColor: Colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: Colors.primary + '30',
+  },
+  statsSegmentText: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+    fontWeight: '500',
+  },
+  statsSegmentTextActive: {
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  rundownGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 8,
+  },
+  rundownGridItem: {
+    width: '48%',
+    backgroundColor: Colors.surfaceHighlight,
+    padding: 12,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  rundownItemLabel: {
+    ...Typography.micro,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  rundownItemValue: {
+    ...Typography.title2,
+    fontSize: 16,
+    color: Colors.textPrimary,
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  rundownItemSub: {
+    ...Typography.micro,
+    color: Colors.textMuted,
+    fontSize: 10,
+  },
+  weeklyDisciplineRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  disciplineStatBox: {
+    flex: 1,
+    backgroundColor: Colors.surfaceHighlight,
+    padding: 12,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    alignItems: 'center',
+  },
+  disciplineValue: {
+    ...Typography.title2,
+    fontSize: 18,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  disciplineLabel: {
+    ...Typography.micro,
+    color: Colors.textMuted,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  deltaText: {
+    ...Typography.micro,
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  deltaGood: {
+    color: Colors.primary,
+  },
+  deltaWarn: {
+    color: Colors.amber,
+  },
+  deltaNeutral: {
+    ...Typography.micro,
+    color: Colors.textMuted,
+    fontSize: 10,
+    marginTop: 2,
   },
 });
