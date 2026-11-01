@@ -11,6 +11,7 @@ interface HeaderProps {
   waterMl: number;
   waterGoalMl: number;
   purityDays: number;
+  urgeDivertedCount: number;
   controlledSatietyDays: number;
   fastingUnlocked: boolean;
   onOpenSpend: () => void;
@@ -35,6 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
   waterMl,
   waterGoalMl,
   purityDays,
+  urgeDivertedCount,
   controlledSatietyDays,
   fastingUnlocked,
   onOpenSpend,
@@ -90,9 +92,10 @@ export const Header: React.FC<HeaderProps> = ({
         <View style={styles.streakCol}>
           <View style={styles.streakLabelRow}>
             <Ionicons name="shield-checkmark" size={15} color={Colors.emerald} />
-            <Text style={styles.streakLabel}>CELIBACY & PURITY</Text>
+            <Text style={styles.streakLabel}>PURITY STREAK</Text>
           </View>
           <Text style={styles.streakCount}>Day {purityDays} Clean</Text>
+          <Text style={styles.subStreak}>{urgeDivertedCount} Diverted</Text>
         </View>
 
         <View style={styles.divider} />
@@ -103,8 +106,9 @@ export const Header: React.FC<HeaderProps> = ({
             <Text style={styles.streakLabel}>SATIETY DISCIPLINE</Text>
           </View>
           <Text style={styles.streakCount}>
-            {controlledSatietyDays} / 14d {fastingUnlocked ? '⚡ Fasting Unlocked' : 'to Fasting'}
+            {controlledSatietyDays} / 14d
           </Text>
+          <Text style={styles.subStreak}>{fastingUnlocked ? 'Fasting Unlocked' : 'to Fasting'}</Text>
         </View>
 
         <View style={styles.divider} />
@@ -114,7 +118,8 @@ export const Header: React.FC<HeaderProps> = ({
             <Ionicons name="water" size={14} color={Colors.cyan} />
             <Text style={styles.streakLabel}>HYDRATION</Text>
           </View>
-          <Text style={[styles.streakCount, { color: Colors.cyan }]}>{waterMl}ml ({waterPct}%)</Text>
+          <Text style={[styles.streakCount, { color: Colors.cyan }]}>{waterMl}ml</Text>
+          <Text style={styles.subStreak}>{waterPct}% of 3L</Text>
         </View>
       </View>
 
@@ -224,9 +229,15 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.textPrimary,
   },
+  subStreak: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: Colors.textMuted,
+    marginTop: 1,
+  },
   divider: {
     width: 1,
-    height: 24,
+    height: 28,
     backgroundColor: Colors.border,
   },
   phaseBanner: {

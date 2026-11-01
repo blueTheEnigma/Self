@@ -101,6 +101,8 @@ export function getInitialState(): SelfAppState {
       waterGoalMl: 3000,
       fullnessLogs: [],
       purityStreakDays: 1,
+      urgeDivertedCount: 0,
+      relapseHistory: [],
       consecutiveControlledSatietyDays: 1,
       fastingModeUnlocked: false,
       lastPurityCheckDate: today
@@ -163,6 +165,14 @@ class StorageService {
           parsed.sanctuary.microJournalWins = '';
           parsed.sanctuary.microJournalFriction = '';
           parsed.integrity.purityStreakDays += 1;
+        }
+
+        // Ensure backward compatibility
+        if (parsed.integrity.urgeDivertedCount === undefined) {
+          parsed.integrity.urgeDivertedCount = 0;
+        }
+        if (!parsed.integrity.relapseHistory) {
+          parsed.integrity.relapseHistory = [];
         }
 
         this.cache = parsed;
@@ -313,7 +323,20 @@ class StorageService {
 
   async recordUrgeDefeated(): Promise<SelfAppState> {
     const state = await this.loadState();
+    state.integrity.urgeDivertedCount += 1;
     state.integrity.lastUrgeDefeatedTimestamp = new Date().toISOString();
+    await this.saveState(state);
+    return state;
+  }
+
+  async recordRelapse(reflection?: string): Promise<SelfAppState> {
+    const state = await this.loadState();
+    state.integrity.relapseHistory.unshift({
+      date: getTodayDateString(),
+      reflection
+    });
+    // Reset active streak to Day 0 (Day 1 starts fresh)
+    state.integrity.purityStreakDays = 0;
     await this.saveState(state);
     return state;
   }

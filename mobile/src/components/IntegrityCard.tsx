@@ -10,6 +10,7 @@ interface IntegrityCardProps {
   onAddWater: (ml: number) => void;
   onOpenMealModal: (meal: 'Breakfast' | 'Lunch' | 'Dinner', currentRating: number) => void;
   onOpenUrgeDefeater: () => void;
+  onOpenRelapseModal: () => void;
 }
 
 export const IntegrityCard: React.FC<IntegrityCardProps> = ({
@@ -17,6 +18,7 @@ export const IntegrityCard: React.FC<IntegrityCardProps> = ({
   onAddWater,
   onOpenMealModal,
   onOpenUrgeDefeater,
+  onOpenRelapseModal,
 }) => {
   const waterPct = Math.min(Math.round((integrity.waterMl / integrity.waterGoalMl) * 100), 100);
 
@@ -131,18 +133,45 @@ export const IntegrityCard: React.FC<IntegrityCardProps> = ({
         </View>
       </View>
 
-      {/* PILLAR 3: Discreet Purity Shield */}
+      {/* PILLAR 3: Discreet Purity Shield & Reset Control */}
       <View style={styles.puritySection}>
-        <View style={styles.purityLeft}>
-          <Ionicons name="shield-checkmark" size={20} color={Colors.emerald} />
-          <View>
-            <Text style={styles.purityTitle}>CELIBACY & PURITY SHIELD</Text>
-            <Text style={styles.puritySubtitle}>
-              Standard: <Text style={{ color: Colors.emerald, fontWeight: '800' }}>Day {integrity.purityStreakDays} Clean</Text>
+        <View style={styles.purityTop}>
+          <View style={styles.purityLeft}>
+            <Ionicons name="shield-checkmark" size={22} color={Colors.emerald} />
+            <View>
+              <Text style={styles.purityTitle}>CELIBACY & PURITY SHIELD</Text>
+              <Text style={styles.puritySubtitle}>
+                Standard: <Text style={{ color: Colors.emerald, fontWeight: '800' }}>Day {integrity.purityStreakDays} Clean</Text>
+              </Text>
+            </View>
+          </View>
+
+          {/* Urge Diverted Trophy Counter */}
+          <View style={styles.trophyBadge}>
+            <Ionicons name="flash" size={12} color={Colors.amber} />
+            <Text style={styles.trophyText}>
+              {integrity.urgeDivertedCount} Diverted
             </Text>
           </View>
         </View>
-        <Ionicons name="lock-closed" size={16} color={Colors.emerald} />
+
+        {/* Reset / Relapse Log Button */}
+        <View style={styles.purityActionsRow}>
+          <Text style={styles.purityHint}>
+            Defenses holding strong. If a breach occurs, log honestly:
+          </Text>
+          <TouchableOpacity 
+            style={styles.relapseBtn}
+            onPress={() => {
+              safeHaptics.light();
+              onOpenRelapseModal();
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="refresh-outline" size={13} color={Colors.ruby} />
+            <Text style={styles.relapseBtnText}>Log Lapse & Reset</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -318,14 +347,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   puritySection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     backgroundColor: Colors.emeraldMuted,
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: Colors.emerald + '30',
+  },
+  purityTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
   },
   purityLeft: {
     flexDirection: 'row',
@@ -342,5 +374,50 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textPrimary,
     marginTop: 1,
+  },
+  trophyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  trophyText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  purityActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: Spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: Colors.emerald + '20',
+  },
+  purityHint: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    flex: 1,
+  },
+  relapseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.ruby + '40',
+  },
+  relapseBtnText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.ruby,
   },
 });

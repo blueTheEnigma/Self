@@ -29,6 +29,7 @@ import { UrgeDefeaterModal } from './src/components/UrgeDefeaterModal';
 import { ExerciseTechniqueModal } from './src/components/ExerciseTechniqueModal';
 import { MealLoggingModal } from './src/components/MealLoggingModal';
 import { BodyMetricsModal } from './src/components/BodyMetricsModal';
+import { RelapseResetModal } from './src/components/RelapseResetModal';
 import { ExerciseGuide } from './src/services/exerciseData';
 import { safeHaptics } from './src/services/haptics';
 
@@ -41,6 +42,7 @@ export default function App() {
   const [showSpendModal, setShowSpendModal] = useState(false);
   const [showUrgeModal, setShowUrgeModal] = useState(false);
   const [showBodyModal, setShowBodyModal] = useState(false);
+  const [showRelapseModal, setShowRelapseModal] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState<ExerciseGuide | null>(null);
   const [activeMealModal, setActiveMealModal] = useState<{
     meal: 'Breakfast' | 'Lunch' | 'Dinner';
@@ -144,6 +146,11 @@ export default function App() {
     setAppState({ ...updated });
   };
 
+  const handleRelapseConfirm = async (reflection?: string) => {
+    const updated = await storage.recordRelapse(reflection);
+    setAppState({ ...updated });
+  };
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
@@ -157,6 +164,7 @@ export default function App() {
             waterMl={appState.integrity.waterMl}
             waterGoalMl={appState.integrity.waterGoalMl}
             purityDays={appState.integrity.purityStreakDays}
+            urgeDivertedCount={appState.integrity.urgeDivertedCount}
             controlledSatietyDays={appState.integrity.consecutiveControlledSatietyDays}
             fastingUnlocked={appState.integrity.fastingModeUnlocked}
             onOpenSpend={() => setShowSpendModal(true)}
@@ -232,6 +240,7 @@ export default function App() {
                 onAddWater={handleAddWater}
                 onOpenMealModal={(meal, rating) => setActiveMealModal({ meal, rating })}
                 onOpenUrgeDefeater={() => setShowUrgeModal(true)}
+                onOpenRelapseModal={() => setShowRelapseModal(true)}
               />
             )}
 
@@ -319,6 +328,12 @@ export default function App() {
           visible={showUrgeModal}
           onConquer={handleUrgeConquered}
           onClose={() => setShowUrgeModal(false)}
+        />
+
+        <RelapseResetModal
+          visible={showRelapseModal}
+          onConfirmReset={handleRelapseConfirm}
+          onClose={() => setShowRelapseModal(false)}
         />
 
         <ExerciseTechniqueModal

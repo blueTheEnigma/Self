@@ -52,9 +52,14 @@ export interface SpiritualAnchorState {
 export interface FullnessLog {
   meal: 'Breakfast' | 'Lunch' | 'Dinner';
   rating: number; // 1-5 (3 is optimal 80%)
-  description?: string; // Optional: what was eaten
-  trigger?: string; // Optional: if rating > 3, what triggered overeating
+  description?: string;
+  trigger?: string;
   timestamp: string;
+}
+
+export interface RelapseRecord {
+  date: string;
+  reflection?: string;
 }
 
 export interface HabitIntegrityState {
@@ -62,7 +67,9 @@ export interface HabitIntegrityState {
   waterGoalMl: number;
   fullnessLogs: FullnessLog[];
   purityStreakDays: number;
-  consecutiveControlledSatietyDays: number; // Toward 14-day intermittent fasting unlock
+  urgeDivertedCount: number; // Cumulative times urge defeater was completed
+  relapseHistory: RelapseRecord[];
+  consecutiveControlledSatietyDays: number;
   fastingModeUnlocked: boolean;
   lastPurityCheckDate: string;
   lastUrgeDefeatedTimestamp?: string;
