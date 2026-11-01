@@ -11,6 +11,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from './src/theme/colors';
+import { Typography } from './src/theme/typography';
 import { SelfAppState, DayPhase } from './src/types';
 import { 
   storage, 
@@ -40,7 +41,7 @@ export default function App() {
   const [dayPhase, setDayPhase] = useState<DayPhase>('MORNING_RITUAL');
   const [loading, setLoading] = useState(true);
 
-  // 4 Primary Navigation Tabs
+  // 5 Dedicated Bottom Tabs (Vault & Stats Separated)
   const [activeNavTab, setActiveNavTab] = useState<NavTabId>('today');
 
   // Modals state
@@ -172,7 +173,7 @@ export default function App() {
         <ExpoStatusBar style="dark" />
 
         <View style={styles.canvasBackground}>
-          {/* Top Decluttered Header with Compact Chips & Live Spend */}
+          {/* Top Clean Monochromatic Header */}
           <Header
             currentDate={appState.currentDate}
             dayPhase={dayPhase}
@@ -193,11 +194,11 @@ export default function App() {
             showsVerticalScrollIndicator={false}
           >
             {/* ======================================================== */}
-            {/* SCREEN 1: TODAY (CONTEXTUAL ACTIVE PHASE HERO)            */}
+            {/* TAB 1: TODAY (PROPORTIONED, NO SLIM BOX, NO RAINBOW)     */}
             {/* ======================================================== */}
             {activeNavTab === 'today' && (
               <View style={styles.screenContainer}>
-                {/* SUNDAY BODY METRIC AUDIT BANNER */}
+                {/* SUNDAY SABBATH AUDIT CARD */}
                 {isSunday && (
                   <TouchableOpacity
                     style={[
@@ -210,40 +211,40 @@ export default function App() {
                     }}
                     activeOpacity={0.8}
                   >
-                    <View style={styles.sundayHeader}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={styles.cardHeaderRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Ionicons 
-                          name={hasLoggedMetricsToday ? "checkmark-circle" : "scale"} 
-                          size={16} 
-                          color={hasLoggedMetricsToday ? Colors.emerald : Colors.amber} 
+                          name={hasLoggedMetricsToday ? "checkmark-circle" : "scale-outline"} 
+                          size={18} 
+                          color={hasLoggedMetricsToday ? Colors.primary : Colors.amber} 
                         />
                         <Text style={[
                           styles.sundayTitle, 
-                          { color: hasLoggedMetricsToday ? Colors.emerald : Colors.amber }
+                          { color: hasLoggedMetricsToday ? Colors.primary : Colors.amber }
                         ]}>
                           {hasLoggedMetricsToday 
-                            ? '✓ SUNDAY SABBATH AUDIT LOGGED' 
-                            : '⚡ SUNDAY BODY METRICS AUDIT DUE'}
+                            ? 'Sunday Sabbath Audit Logged' 
+                            : 'Sunday Body Metrics Audit Due'}
                         </Text>
                       </View>
-                      <Text style={styles.sundayActionPill}>
-                        {hasLoggedMetricsToday ? 'Review ➔' : 'Record Now ➔'}
+                      <Text style={styles.cardActionLink}>
+                        {hasLoggedMetricsToday ? 'Review' : 'Record Now ➔'}
                       </Text>
                     </View>
 
-                    <Text style={styles.sundayDesc}>
+                    <Text style={styles.cardDescriptionText}>
                       {hasLoggedMetricsToday
-                        ? `Logged: ${appState.bodyWeightKg}kg • ${appState.waistCircumferenceCm}cm waist • ${appState.tummyCircumferenceCm}cm tummy • Level ${appState.anklePainRating} ankle.`
-                        : 'Today is Sunday Sabbath. Measure your weight, waist, tummy, and left ankle recovery.'}
+                        ? `Logged: ${appState.bodyWeightKg}kg • ${appState.waistCircumferenceCm}cm waist • ${appState.tummyCircumferenceCm}cm tummy • Ankle Level ${appState.anklePainRating}.`
+                        : 'Measure weight, waist (cm), tummy (cm), and rate your left ankle strain to verify 7-day progress.'}
                     </Text>
                   </TouchableOpacity>
                 )}
 
-                {/* CONTEXTUAL ACTIVE PHASE HERO CARD */}
-                <View style={styles.heroSection}>
-                  <Text style={styles.sectionEyebrow}>CURRENT TIME FOCUS</Text>
+                {/* CURRENT FOCUS HERO CARD (COMFORTABLE FULL WIDTH) */}
+                <View style={styles.heroWrapper}>
+                  <Text style={styles.sectionHeaderLabel}>CURRENT FOCUS</Text>
 
-                  {/* Phase 1: Morning Ritual */}
+                  {/* 1. Morning Ritual Active Phase */}
                   {dayPhase === 'MORNING_RITUAL' && (
                     <View>
                       <SpiritualAnchorCard
@@ -251,25 +252,25 @@ export default function App() {
                         onToggle={handleToggleSpiritual}
                       />
 
-                      {/* Movement Jump Prompt */}
+                      {/* Movement Hub Transition Prompt */}
                       <TouchableOpacity 
-                        style={styles.movementJumpCard}
+                        style={styles.movementPromptCard}
                         onPress={() => {
                           safeHaptics.light();
                           setActiveNavTab('movement');
                         }}
                         activeOpacity={0.8}
                       >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <View style={styles.jumpIconCircle}>
-                            <Ionicons name="barbell" size={18} color="#ffffff" />
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                          <View style={styles.promptIconCircle}>
+                            <Ionicons name="barbell-outline" size={20} color={Colors.primary} />
                           </View>
-                          <View>
-                            <Text style={styles.jumpCardTitle}>
-                              {isRunningDay ? '🏃 2.5km Run & Calisthenics' : '🧘 Active Recovery & Ankle Prehab'}
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.promptCardTitle}>
+                              {isRunningDay ? '2.5km Run & Calisthenics' : 'Active Recovery & Ankle Prehab'}
                             </Text>
-                            <Text style={styles.jumpCardSubtitle}>
-                              Open Movement Hub to log sets & form guides ➔
+                            <Text style={styles.promptCardDesc}>
+                              Open Movement Hub to log sets, rest timer & form guides ➔
                             </Text>
                           </View>
                         </View>
@@ -277,25 +278,28 @@ export default function App() {
                     </View>
                   )}
 
-                  {/* Phase 2: Deep Work 1 / 2 / 3 */}
+                  {/* 2. Deep Work Active Phase */}
                   {(dayPhase === 'DEEP_WORK_1' || dayPhase === 'DEEP_WORK_2' || dayPhase === 'DEEP_WORK_3') && (
                     <FocusTimerCard
                       onCompleteBlock={handleCompleteFocusBlock}
                     />
                   )}
 
-                  {/* Phase 3: Midday / Afternoon Buffer & Satiety */}
+                  {/* 3. Midday / Afternoon Buffer & Satiety */}
                   {(dayPhase === 'MIDDAY_BUFFER' || dayPhase === 'AFTERNOON_BUFFER') && (
-                    <View style={styles.satietyHeroCard}>
-                      <View style={styles.satietyHeroHeader}>
-                        <Ionicons name="restaurant" size={20} color={Colors.emerald} />
-                        <Text style={styles.satietyHeroTitle}>MINDFUL SATIETY CHECK</Text>
+                    <View style={styles.contentCard}>
+                      <View style={styles.cardHeaderRow}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="restaurant-outline" size={18} color={Colors.primary} />
+                          <Text style={styles.contentCardTitle}>Mindful Satiety Check</Text>
+                        </View>
+                        <Text style={styles.cardSubBadge}>Target: Level 3</Text>
                       </View>
-                      <Text style={styles.satietyHeroDesc}>
-                        Target Level 3 (80% full — Hara Hachi Bu). Never eat to stuffed level 4 or 5.
+                      <Text style={styles.cardDescriptionText}>
+                        Eat to 80% fullness (Hara Hachi Bu). Stop when satiety is reached; avoid stuffed Level 4 or 5.
                       </Text>
                       <TouchableOpacity 
-                        style={styles.rateMealBtn}
+                        style={styles.primaryActionButton}
                         onPress={() => {
                           safeHaptics.light();
                           setActiveMealModal({
@@ -303,15 +307,16 @@ export default function App() {
                             rating: 3,
                           });
                         }}
+                        activeOpacity={0.8}
                       >
-                        <Text style={styles.rateMealBtnText}>
+                        <Text style={styles.primaryActionText}>
                           Rate {dayPhase === 'MIDDAY_BUFFER' ? 'Breakfast' : 'Lunch'} Satiety ➔
                         </Text>
                       </TouchableOpacity>
                     </View>
                   )}
 
-                  {/* Phase 4: Evening Sanctuary */}
+                  {/* 4. Evening Sanctuary */}
                   {dayPhase === 'EVENING_SANCTUARY' && (
                     <EveningSanctuaryCard
                       sanctuary={appState.sanctuary}
@@ -321,67 +326,69 @@ export default function App() {
                     />
                   )}
 
-                  {/* Phase 5: Night Rest / Life Buffer */}
+                  {/* 5. Night Rest / Life Buffer */}
                   {(dayPhase === 'NIGHT_REST' || dayPhase === 'LIFE_BUFFER') && (
-                    <View style={styles.restHeroCard}>
-                      <Ionicons name="moon" size={24} color={Colors.violet} />
-                      <Text style={styles.restTitle}>
-                        {dayPhase === 'NIGHT_REST' ? 'Sabbath Night Rest' : 'Guilt-Free Life Buffer'}
-                      </Text>
-                      <Text style={styles.restDesc}>
-                        {dayPhase === 'NIGHT_REST'
-                          ? 'Deep restorative sleep allows neural consolidation and tissue repair for your left ankle.'
-                          : 'Zero-guilt buffer for errands, rest, reading, or family. Clear mind for tomorrow.'}
-                      </Text>
-                      <View style={styles.tomorrowBox}>
-                        <Text style={styles.tomorrowLabel}>TOMORROW ANCHOR:</Text>
-                        <Text style={styles.tomorrowText}>{appState.sanctuary.tomorrowAnchor}</Text>
+                    <View style={styles.contentCard}>
+                      <View style={{ alignItems: 'center', paddingVertical: Spacing.md }}>
+                        <Ionicons name="moon-outline" size={28} color={Colors.primary} />
+                        <Text style={[styles.contentCardTitle, { marginTop: Spacing.sm }]}>
+                          {dayPhase === 'NIGHT_REST' ? 'Sabbath Night Rest' : 'Guilt-Free Life Buffer'}
+                        </Text>
+                        <Text style={[styles.cardDescriptionText, { textAlign: 'center', marginTop: Spacing.xs }]}>
+                          {dayPhase === 'NIGHT_REST'
+                            ? '7 hours of deep restorative sleep enables neuroplastic consolidation and tendon repair for your left ankle.'
+                            : 'Open life buffer for errands, reflection, and quiet reading without guilt.'}
+                        </Text>
+                        <View style={styles.quietAnchorBox}>
+                          <Text style={styles.quietAnchorLabel}>TOMORROW'S ANCHOR</Text>
+                          <Text style={styles.quietAnchorValue}>{appState.sanctuary.tomorrowAnchor}</Text>
+                        </View>
                       </View>
                     </View>
                   )}
                 </View>
 
-                {/* QUICK-ACTION MICRO DOCK (1-TAP CAPTURE) */}
-                <View style={styles.dockSection}>
-                  <Text style={styles.sectionEyebrow}>QUICK ACTIONS</Text>
+                {/* UNIFIED TACTILE QUICK ACTION DOCK */}
+                <View style={styles.dockWrapper}>
+                  <Text style={styles.sectionHeaderLabel}>QUICK CAPTURE</Text>
                   <View style={styles.dockRow}>
-                    {/* Water +500ml */}
+                    {/* +500ml Water */}
                     <TouchableOpacity 
-                      style={[styles.dockBtn, { borderColor: Colors.cyan + '40', backgroundColor: Colors.cyanMuted }]}
+                      style={styles.dockButton}
                       onPress={() => {
                         safeHaptics.medium();
                         handleAddWater(500);
                       }}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="water" size={18} color={Colors.cyan} />
-                      <Text style={[styles.dockBtnText, { color: Colors.cyan }]}>+500ml</Text>
+                      <Ionicons name="water-outline" size={17} color={Colors.textPrimary} />
+                      <Text style={styles.dockButtonText}>+500ml Water</Text>
                     </TouchableOpacity>
 
-                    {/* Urge Defeater Emergency */}
+                    {/* Urge Defeater */}
                     <TouchableOpacity 
-                      style={[styles.dockBtn, { borderColor: Colors.ruby + '40', backgroundColor: Colors.rubyMuted }]}
+                      style={styles.dockButton}
                       onPress={() => {
                         safeHaptics.warning();
                         setShowUrgeModal(true);
                       }}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="flash" size={18} color={Colors.ruby} />
-                      <Text style={[styles.dockBtnText, { color: Colors.ruby }]}>Urge Defeater</Text>
+                      <Ionicons name="flash-outline" size={17} color={Colors.ruby} />
+                      <Text style={[styles.dockButtonText, { color: Colors.ruby }]}>Urge Defeater</Text>
                     </TouchableOpacity>
 
                     {/* Quick Spend */}
                     <TouchableOpacity 
-                      style={[styles.dockBtn, { borderColor: Colors.primary + '40', backgroundColor: Colors.primaryMuted }]}
+                      style={styles.dockButton}
                       onPress={() => {
                         safeHaptics.medium();
                         setShowSpendModal(true);
                       }}
                       activeOpacity={0.7}
                     >
-                      <Text style={[styles.dockBtnText, { color: Colors.primary, fontWeight: '900', fontSize: 16 }]}>₦</Text>
-                      <Text style={[styles.dockBtnText, { color: Colors.primary }]}>Log Spend</Text>
+                      <Text style={[styles.dockButtonText, { fontWeight: '700' }]}>₦</Text>
+                      <Text style={styles.dockButtonText}>Log Spend</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -389,28 +396,24 @@ export default function App() {
             )}
 
             {/* ======================================================== */}
-            {/* SCREEN 2: MOVEMENT (KAIZEN WORKOUT & LEFT ANKLE HUB)      */}
+            {/* TAB 2: MOVEMENT (2.5KM RUN & KAIZEN OVERLOAD ENGINE)     */}
             {/* ======================================================== */}
             {activeNavTab === 'movement' && (
               <View style={styles.screenContainer}>
-                {/* Movement Status Header */}
-                <View style={styles.tabBanner}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Ionicons name="barbell" size={20} color={Colors.primary} />
-                    <View>
-                      <Text style={styles.tabBannerTitle}>KAIZEN MOVEMENT HUB</Text>
-                      <Text style={styles.tabBannerSubtitle}>
-                        {isRunningDay ? 'Run Day: 2.5km + Calisthenics' : 'Recovery Day: Ankle Prehab & Stretches'}
-                      </Text>
-                    </View>
+                {/* Movement Section Header */}
+                <View style={styles.tabBannerHeader}>
+                  <View>
+                    <Text style={styles.tabBannerTitle}>KAIZEN MOVEMENT</Text>
+                    <Text style={styles.tabBannerSubtitle}>
+                      {isRunningDay ? 'Run Day: 2.5km + Home Calisthenics' : 'Recovery Day: Ankle Prehab & Stretches'}
+                    </Text>
                   </View>
-
-                  <View style={styles.ankleStatusPill}>
-                    <Text style={styles.ankleStatusText}>Ankle Pain: {appState.anklePainRating}/5</Text>
+                  <View style={styles.statusChip}>
+                    <Text style={styles.statusChipText}>Ankle Strain: {appState.anklePainRating}/5</Text>
                   </View>
                 </View>
 
-                {/* Full Kaizen Workout Card */}
+                {/* Workout Card */}
                 <WorkoutCard
                   workout={appState.workout}
                   overloadConfig={appState.overloadConfig}
@@ -423,42 +426,39 @@ export default function App() {
             )}
 
             {/* ======================================================== */}
-            {/* SCREEN 3: DEEP WORK (90M TIMERS & DAILY RHYTHM STRIP)    */}
+            {/* TAB 3: FOCUS (DEEP WORK 90M COMPRESSIONS & SCHEDULE)     */}
             {/* ======================================================== */}
             {activeNavTab === 'focus' && (
               <View style={styles.screenContainer}>
-                <View style={styles.tabBanner}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Ionicons name="timer" size={20} color={Colors.primary} />
-                    <View>
-                      <Text style={styles.tabBannerTitle}>DEEP WORK COMPRESSIONS</Text>
-                      <Text style={styles.tabBannerSubtitle}>90-Minute Hard-Cap Engine & 15m Cooldowns</Text>
-                    </View>
+                <View style={styles.tabBannerHeader}>
+                  <View>
+                    <Text style={styles.tabBannerTitle}>DEEP WORK COMPRESSIONS</Text>
+                    <Text style={styles.tabBannerSubtitle}>90-Minute Hard-Cap Engine & 15m Mandatory Cooldowns</Text>
                   </View>
                 </View>
 
-                {/* 24-Hour Visual Schedule Rhythm Strip */}
+                {/* 24-Hour Visual Schedule Strip */}
                 <TimeBlocksBar
                   currentPhase={dayPhase}
                   onSelectBlock={(phase) => setDayPhase(phase)}
                 />
 
-                {/* Focus Timer Card */}
+                {/* 90-Minute Timer Card */}
                 <FocusTimerCard
                   onCompleteBlock={handleCompleteFocusBlock}
                 />
 
-                {/* Completed Focus Blocks History */}
+                {/* Today's Completed Sessions History */}
                 {appState.focusBlocks.length > 0 && (
-                  <View style={styles.historyCard}>
-                    <Text style={styles.historyTitle}>TODAY'S COMPLETED SESSIONS</Text>
+                  <View style={styles.contentCard}>
+                    <Text style={styles.subCardHeader}>TODAY'S COMPLETED SESSIONS</Text>
                     {appState.focusBlocks.map(block => (
-                      <View key={block.id} style={styles.focusBlockRow}>
+                      <View key={block.id} style={styles.historyListRow}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Ionicons name="checkmark-circle" size={16} color={Colors.emerald} />
-                          <Text style={styles.focusProjectText}>{block.project}</Text>
+                          <Ionicons name="checkmark-circle" size={16} color={Colors.primary} />
+                          <Text style={styles.historyItemTitle}>{block.project}</Text>
                         </View>
-                        <Text style={styles.focusDurationText}>{block.durationMinutes} mins</Text>
+                        <Text style={styles.historyItemMeta}>{block.durationMinutes} mins</Text>
                       </View>
                     ))}
                   </View>
@@ -467,21 +467,18 @@ export default function App() {
             )}
 
             {/* ======================================================== */}
-            {/* SCREEN 4: VAULT & STATS (INTEGRITY, FINANCES & BODY)     */}
+            {/* TAB 4: VAULT (INNER SANCTUM / VIRTUES & INTEGRITY)       */}
             {/* ======================================================== */}
             {activeNavTab === 'vault' && (
               <View style={styles.screenContainer}>
-                <View style={styles.tabBanner}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Ionicons name="shield-checkmark" size={20} color={Colors.emerald} />
-                    <View>
-                      <Text style={styles.tabBannerTitle}>INTEGRITY & BODY MIRROR</Text>
-                      <Text style={styles.tabBannerSubtitle}>Purity Shield, Expenses & Physical Trends</Text>
-                    </View>
+                <View style={styles.tabBannerHeader}>
+                  <View>
+                    <Text style={styles.tabBannerTitle}>THE VAULT</Text>
+                    <Text style={styles.tabBannerSubtitle}>Inner Sanctum: Spiritual Anchor, Purity & Satiety</Text>
                   </View>
                 </View>
 
-                {/* 1. Integrity Card (Purity, Battle Log, Urge Counter, Relapse Reset) */}
+                {/* 1. Integrity Card (Purity Shield, Battle Counter, Fall Reset) */}
                 <IntegrityCard
                   integrity={appState.integrity}
                   onAddWater={handleAddWater}
@@ -490,86 +487,13 @@ export default function App() {
                   onOpenRelapseModal={() => setShowRelapseModal(true)}
                 />
 
-                {/* 2. Financial Ledger Card */}
-                <View style={styles.ledgerCard}>
-                  <View style={styles.ledgerHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={{ fontSize: 16 }}>💳</Text>
-                      <Text style={styles.ledgerTitle}>FINANCIAL LEDGER (TODAY)</Text>
-                    </View>
-                    <Text style={styles.ledgerTotalText}>₦{todaySpent.toLocaleString()}</Text>
-                  </View>
+                {/* 2. Morning Spiritual Grounding Card */}
+                <SpiritualAnchorCard
+                  spiritual={appState.spiritual}
+                  onToggle={handleToggleSpiritual}
+                />
 
-                  {todayTransactions.length === 0 ? (
-                    <Text style={styles.emptyLedgerText}>No expenses logged yet today.</Text>
-                  ) : (
-                    <View style={styles.txWrap}>
-                      {todayTransactions.map(tx => (
-                        <View key={tx.id} style={styles.txMiniRow}>
-                          <Text style={styles.txCategoryTag}>{tx.category}</Text>
-                          <Text style={styles.txAmountText}>₦{tx.amount.toLocaleString()}</Text>
-                          <TouchableOpacity 
-                            onPress={() => {
-                              safeHaptics.warning();
-                              handleDeleteSpend(tx.id);
-                            }}
-                          >
-                            <Ionicons name="trash-outline" size={15} color={Colors.ruby} />
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  <TouchableOpacity 
-                    style={styles.openSpendBtn}
-                    onPress={() => {
-                      safeHaptics.light();
-                      setShowSpendModal(true);
-                    }}
-                  >
-                    <Text style={styles.openSpendBtnText}>+ Log Expense with NumPad</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* 3. Body Metrics Card */}
-                <TouchableOpacity 
-                  style={styles.bodyMetricsCard}
-                  onPress={() => {
-                    safeHaptics.light();
-                    setShowBodyModal(true);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.bodyHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Ionicons name="scale" size={16} color={Colors.emerald} />
-                      <Text style={styles.bodyTitle}>WEEKLY BODY COMPOSITION & ANKLE STATUS</Text>
-                    </View>
-                    <Text style={styles.bodyTapPrompt}>Tap to audit ➔</Text>
-                  </View>
-
-                  <View style={styles.statsGrid}>
-                    <View style={styles.metricBox}>
-                      <Text style={styles.metricVal}>{appState.bodyWeightKg} kg</Text>
-                      <Text style={styles.metricLabel}>Weight</Text>
-                    </View>
-                    <View style={styles.metricBox}>
-                      <Text style={styles.metricVal}>{appState.waistCircumferenceCm} cm</Text>
-                      <Text style={styles.metricLabel}>Waist</Text>
-                    </View>
-                    <View style={styles.metricBox}>
-                      <Text style={styles.metricVal}>{appState.tummyCircumferenceCm} cm</Text>
-                      <Text style={styles.metricLabel}>Tummy</Text>
-                    </View>
-                    <View style={styles.metricBox}>
-                      <Text style={[styles.metricVal, { color: Colors.amber }]}>Level {appState.anklePainRating}</Text>
-                      <Text style={styles.metricLabel}>Ankle Strain</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-
-                {/* 4. Evening Sanctuary & Hobbies (if user wants to log early) */}
+                {/* 3. Evening Sanctuary (Guitar & Reflection) */}
                 <EveningSanctuaryCard
                   sanctuary={appState.sanctuary}
                   onAddGuitarMinutes={handleAddGuitar}
@@ -579,10 +503,128 @@ export default function App() {
               </View>
             )}
 
-            <View style={{ height: 40 }} />
+            {/* ======================================================== */}
+            {/* TAB 5: STATS (THE QUANTIFIED SELF / METRICS & LEDGER)    */}
+            {/* ======================================================== */}
+            {activeNavTab === 'stats' && (
+              <View style={styles.screenContainer}>
+                <View style={styles.tabBannerHeader}>
+                  <View>
+                    <Text style={styles.tabBannerTitle}>STATS & MIRROR</Text>
+                    <Text style={styles.tabBannerSubtitle}>Physical Trends, Financial Ledger & Analytics</Text>
+                  </View>
+                </View>
+
+                {/* 1. Weekly Body Composition & Left Ankle Status */}
+                <TouchableOpacity 
+                  style={styles.contentCard}
+                  onPress={() => {
+                    safeHaptics.light();
+                    setShowBodyModal(true);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.cardHeaderRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Ionicons name="scale-outline" size={18} color={Colors.primary} />
+                      <Text style={styles.contentCardTitle}>Body Composition & Ankle</Text>
+                    </View>
+                    <Text style={styles.cardActionLink}>Log Audit ➔</Text>
+                  </View>
+
+                  <View style={styles.statsSummaryGrid}>
+                    <View style={styles.statMetricItem}>
+                      <Text style={styles.statMetricValue}>{appState.bodyWeightKg} kg</Text>
+                      <Text style={styles.statMetricLabel}>Weight</Text>
+                    </View>
+                    <View style={styles.statMetricItem}>
+                      <Text style={styles.statMetricValue}>{appState.waistCircumferenceCm} cm</Text>
+                      <Text style={styles.statMetricLabel}>Waist</Text>
+                    </View>
+                    <View style={styles.statMetricItem}>
+                      <Text style={styles.statMetricValue}>{appState.tummyCircumferenceCm} cm</Text>
+                      <Text style={styles.statMetricLabel}>Tummy</Text>
+                    </View>
+                    <View style={styles.statMetricItem}>
+                      <Text style={[styles.statMetricValue, { color: Colors.amber }]}>
+                        Level {appState.anklePainRating}
+                      </Text>
+                      <Text style={styles.statMetricLabel}>Ankle Strain</Text>
+                    </View>
+                  </View>
+
+                  {/* History Preview */}
+                  {appState.bodyMetricsHistory.length > 1 && (
+                    <View style={{ marginTop: Spacing.sm, borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: Spacing.xs }}>
+                      <Text style={styles.subCardHeader}>PREVIOUS AUDIT ({appState.bodyMetricsHistory[1].date})</Text>
+                      <Text style={styles.cardDescriptionText}>
+                        {appState.bodyMetricsHistory[1].weightKg}kg • {appState.bodyMetricsHistory[1].waistCm}cm waist • {appState.bodyMetricsHistory[1].tummyCm}cm tummy
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {/* 2. Financial Expense Ledger */}
+                <View style={styles.contentCard}>
+                  <View style={styles.cardHeaderRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Ionicons name="wallet-outline" size={18} color={Colors.primary} />
+                      <Text style={styles.contentCardTitle}>Today's Expense Ledger</Text>
+                    </View>
+                    <Text style={[styles.contentCardTitle, { color: Colors.primary }]}>
+                      ₦{todaySpent.toLocaleString()}
+                    </Text>
+                  </View>
+
+                  {todayTransactions.length === 0 ? (
+                    <Text style={[styles.cardDescriptionText, { fontStyle: 'italic', marginVertical: Spacing.sm }]}>
+                      No expenses recorded yet today.
+                    </Text>
+                  ) : (
+                    <View style={styles.ledgerList}>
+                      {todayTransactions.map(tx => {
+                        const timeStr = new Date(tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        return (
+                          <View key={tx.id} style={styles.ledgerRow}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <Text style={styles.ledgerCategory}>{tx.category}</Text>
+                              <Text style={styles.ledgerTime}>{timeStr}</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                              <Text style={styles.ledgerAmount}>₦{tx.amount.toLocaleString()}</Text>
+                              <TouchableOpacity 
+                                onPress={() => {
+                                  safeHaptics.warning();
+                                  handleDeleteSpend(tx.id);
+                                }}
+                              >
+                                <Ionicons name="trash-outline" size={15} color={Colors.ruby} />
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                  <TouchableOpacity 
+                    style={styles.outlineActionButton}
+                    onPress={() => {
+                      safeHaptics.light();
+                      setShowSpendModal(true);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.outlineActionText}>+ Log Expense with NumPad</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            <View style={{ height: 36 }} />
           </ScrollView>
 
-          {/* Bottom Native Navigation Bar */}
+          {/* 5-Tab Native Navigation Bar */}
           <BottomNavBar
             activeTab={activeNavTab}
             onSelectTab={setActiveNavTab}
@@ -656,227 +698,193 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: Spacing.sm,
   },
   loadingText: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: Colors.textPrimary,
-    letterSpacing: 2,
+    ...Typography.title2,
+    letterSpacing: 1.5,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingHorizontal: 16, // Golden 16px measure
+    paddingTop: 16,
   },
   screenContainer: {
-    gap: Spacing.sm,
+    gap: 12,
   },
-  sectionEyebrow: {
-    fontSize: 10,
-    fontWeight: '800',
+  sectionHeaderLabel: {
+    ...Typography.micro,
     color: Colors.textMuted,
-    letterSpacing: 1,
-    marginBottom: Spacing.xs,
+    marginBottom: 6,
     marginLeft: 2,
   },
-  heroSection: {
-    marginBottom: Spacing.sm,
+  heroWrapper: {
+    marginBottom: 4,
   },
-  sundayCard: {
+  contentCard: {
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    borderWidth: 1.5,
-    marginBottom: Spacing.sm,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
     ...Shadows.card,
   },
-  sundayCardPending: {
-    backgroundColor: '#fffbeb',
-    borderColor: Colors.amber,
-  },
-  sundayCardDone: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.emerald,
-  },
-  sundayHeader: {
+  cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  contentCardTitle: {
+    ...Typography.title2,
+  },
+  cardSubBadge: {
+    ...Typography.caption,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  cardActionLink: {
+    ...Typography.caption,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  cardDescriptionText: {
+    ...Typography.body,
+    lineHeight: 20,
+  },
+  sundayCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: 16,
+    borderWidth: 1.5,
+    ...Shadows.card,
+  },
+  sundayCardPending: {
+    borderColor: Colors.amber,
+  },
+  sundayCardDone: {
+    borderColor: Colors.primary,
   },
   sundayTitle: {
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+    ...Typography.title3,
   },
-  sundayActionPill: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-  sundayDesc: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    lineHeight: 17,
-  },
-  movementJumpCard: {
+  movementPromptCard: {
     backgroundColor: Colors.surface,
-    padding: Spacing.md,
     borderRadius: BorderRadius.md,
+    padding: 14,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginTop: Spacing.sm,
+    marginTop: 8,
     ...Shadows.soft,
   },
-  jumpIconCircle: {
+  promptIconCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  jumpCardTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: Colors.textPrimary,
+  promptCardTitle: {
+    ...Typography.callout,
+    fontWeight: '600',
   },
-  jumpCardSubtitle: {
-    fontSize: 11,
-    color: Colors.textMuted,
+  promptCardDesc: {
+    ...Typography.caption,
     marginTop: 2,
   },
-  satietyHeroCard: {
-    backgroundColor: Colors.surface,
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.card,
-  },
-  satietyHeroHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: Spacing.xs,
-  },
-  satietyHeroTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: Colors.emerald,
-    letterSpacing: 0.5,
-  },
-  satietyHeroDesc: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    lineHeight: 19,
-    marginBottom: Spacing.md,
-  },
-  rateMealBtn: {
-    backgroundColor: Colors.emerald,
+  primaryActionButton: {
+    marginTop: 12,
+    backgroundColor: Colors.primary,
     paddingVertical: 12,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
     ...Shadows.soft,
   },
-  rateMealBtnText: {
+  primaryActionText: {
+    ...Typography.callout,
     color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
   },
-  restHeroCard: {
-    backgroundColor: Colors.surface,
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.lg,
+  outlineActionButton: {
+    marginTop: 10,
+    backgroundColor: Colors.surfaceHighlight,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
-    alignItems: 'center',
-    textAlign: 'center',
-    ...Shadows.card,
   },
-  restTitle: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: Colors.textPrimary,
-    marginTop: Spacing.sm,
+  outlineActionText: {
+    ...Typography.caption,
+    color: Colors.primary,
+    fontWeight: '600',
   },
-  restDesc: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginTop: Spacing.xs,
-  },
-  tomorrowBox: {
-    marginTop: Spacing.md,
+  quietAnchorBox: {
+    marginTop: 14,
     backgroundColor: Colors.surfaceHighlight,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  tomorrowLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: Colors.textMuted,
-    letterSpacing: 0.5,
+  quietAnchorLabel: {
+    ...Typography.micro,
   },
-  tomorrowText: {
-    fontSize: 12,
-    fontWeight: '800',
+  quietAnchorValue: {
+    ...Typography.callout,
     color: Colors.primary,
     marginTop: 2,
   },
-  dockSection: {
-    marginTop: Spacing.sm,
+  dockWrapper: {
+    marginTop: 6,
   },
   dockRow: {
     flexDirection: 'row',
-    gap: Spacing.xs,
+    gap: 8,
   },
-  dockBtn: {
+  dockButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 13,
+    paddingVertical: 12,
     borderRadius: BorderRadius.md,
+    backgroundColor: Colors.surface,
     borderWidth: 1,
+    borderColor: Colors.border,
     ...Shadows.soft,
   },
-  dockBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
+  dockButtonText: {
+    ...Typography.caption,
+    color: Colors.textPrimary,
+    fontWeight: '600',
   },
-  tabBanner: {
+  tabBannerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: Colors.surface,
-    padding: Spacing.md,
+    padding: 14,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginBottom: Spacing.xs,
     ...Shadows.soft,
   },
   tabBannerTitle: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: Colors.textPrimary,
+    ...Typography.title3,
     letterSpacing: 0.5,
   },
   tabBannerSubtitle: {
-    fontSize: 10,
-    color: Colors.textMuted,
+    ...Typography.caption,
     marginTop: 1,
   },
-  ankleStatusPill: {
+  statusChip: {
     backgroundColor: Colors.surfaceHighlight,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -884,27 +892,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  ankleStatusText: {
-    fontSize: 10,
-    fontWeight: '800',
+  statusChipText: {
+    ...Typography.micro,
     color: Colors.amber,
   },
-  historyCard: {
-    backgroundColor: Colors.surface,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginTop: Spacing.sm,
+  subCardHeader: {
+    ...Typography.micro,
+    marginBottom: 6,
   },
-  historyTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Colors.textMuted,
-    letterSpacing: 0.5,
-    marginBottom: Spacing.sm,
-  },
-  focusBlockRow: {
+  historyListRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -912,133 +908,59 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  focusProjectText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: Colors.textPrimary,
+  historyItemTitle: {
+    ...Typography.callout,
   },
-  focusDurationText: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    fontWeight: '700',
+  historyItemMeta: {
+    ...Typography.caption,
+    fontWeight: '600',
   },
-  ledgerCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.card,
-  },
-  ledgerHeader: {
+  statsSummaryGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 8,
+    marginVertical: 10,
+  },
+  statMetricItem: {
+    flex: 1,
+    backgroundColor: Colors.surfaceHighlight,
+    borderRadius: BorderRadius.sm,
+    paddingVertical: 10,
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  ledgerTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    letterSpacing: 0.5,
+  statMetricValue: {
+    ...Typography.title3,
   },
-  ledgerTotalText: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: Colors.primary,
+  statMetricLabel: {
+    ...Typography.micro,
+    marginTop: 2,
   },
-  emptyLedgerText: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginVertical: Spacing.sm,
-    fontStyle: 'italic',
-  },
-  txWrap: {
+  ledgerList: {
     gap: 6,
-    marginVertical: Spacing.xs,
+    marginVertical: 8,
   },
-  txMiniRow: {
+  ledgerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: Colors.surfaceHighlight,
     paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: BorderRadius.sm,
-  },
-  txCategoryTag: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  txAmountText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-  },
-  openSpendBtn: {
-    marginTop: Spacing.sm,
-    backgroundColor: Colors.surfaceHighlight,
-    paddingVertical: 9,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  openSpendBtnText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-  bodyMetricsCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.card,
-  },
-  bodyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  bodyTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Colors.emerald,
-    letterSpacing: 0.5,
-  },
-  bodyTapPrompt: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: Spacing.xs,
-  },
-  metricBox: {
-    flex: 1,
-    backgroundColor: Colors.surfaceHighlight,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.sm,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  metricVal: {
+  ledgerCategory: {
+    ...Typography.callout,
     fontSize: 13,
-    fontWeight: '800',
-    color: Colors.textPrimary,
   },
-  metricLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: Colors.textMuted,
-    marginTop: 2,
-    textTransform: 'uppercase',
+  ledgerTime: {
+    ...Typography.caption,
+  },
+  ledgerAmount: {
+    ...Typography.callout,
+    fontWeight: '600',
   },
 });

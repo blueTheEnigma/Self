@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../theme/colors';
+import { Typography } from '../theme/typography';
 import { DayPhase } from '../types';
 import { safeHaptics } from '../services/haptics';
 
@@ -19,16 +20,16 @@ interface HeaderProps {
   onOpenBodyMetrics: () => void;
 }
 
-const PHASE_TAGS: Record<DayPhase, { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }> = {
-  MORNING_RITUAL: { label: 'Morning Ritual', icon: 'sunny', color: Colors.amber },
-  DEEP_WORK_1: { label: 'Focus 1: Code Engine', icon: 'code-slash', color: Colors.primary },
-  MIDDAY_BUFFER: { label: 'Midday Reset', icon: 'water', color: Colors.cyan },
-  DEEP_WORK_2: { label: 'Focus 2: Math Sprint', icon: 'calculator', color: Colors.primary },
-  AFTERNOON_BUFFER: { label: 'Lunch & Life Buffer', icon: 'restaurant', color: Colors.emerald },
-  DEEP_WORK_3: { label: 'Focus 3: Fellowships', icon: 'school', color: Colors.violet },
-  LIFE_BUFFER: { label: 'Life Buffer', icon: 'walk', color: Colors.textSecondary },
-  EVENING_SANCTUARY: { label: 'Evening Sanctuary', icon: 'moon', color: Colors.violet },
-  NIGHT_REST: { label: 'Night Rest', icon: 'bed', color: Colors.textMuted },
+const PHASE_LABELS: Record<DayPhase, string> = {
+  MORNING_RITUAL: 'Morning Ritual',
+  DEEP_WORK_1: 'Focus 1: Code Engine',
+  MIDDAY_BUFFER: 'Midday Reset',
+  DEEP_WORK_2: 'Focus 2: Math Sprint',
+  AFTERNOON_BUFFER: 'Lunch & Life Buffer',
+  DEEP_WORK_3: 'Focus 3: Fellowships',
+  LIFE_BUFFER: 'Open Life Buffer',
+  EVENING_SANCTUARY: 'Evening Sanctuary',
+  NIGHT_REST: 'Sabbath Night Rest',
 };
 
 export const Header: React.FC<HeaderProps> = ({
@@ -44,12 +45,12 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSpend,
   onOpenBodyMetrics,
 }) => {
-  const phaseInfo = PHASE_TAGS[dayPhase];
+  const phaseLabel = PHASE_LABELS[dayPhase];
   const waterPct = Math.min(Math.round((waterMl / waterGoalMl) * 100), 100);
 
   const dateObj = new Date(currentDate);
   const formattedDate = dateObj.toLocaleDateString('en-US', {
-    weekday: 'short',
+    weekday: 'long',
     month: 'short',
     day: 'numeric',
   });
@@ -64,27 +65,13 @@ export const Header: React.FC<HeaderProps> = ({
         </View>
 
         <View style={styles.topRightRow}>
-          {/* Active Phase Pill */}
-          <View style={[styles.phasePill, { backgroundColor: phaseInfo.color + '14', borderColor: phaseInfo.color + '40' }]}>
-            <Ionicons name={phaseInfo.icon} size={13} color={phaseInfo.color} />
-            <Text style={[styles.phasePillText, { color: phaseInfo.color }]}>
-              {phaseInfo.label}
-            </Text>
+          {/* Active Phase Quiet Pill */}
+          <View style={styles.phasePill}>
+            <View style={styles.phaseDot} />
+            <Text style={styles.phasePillText}>{phaseLabel}</Text>
           </View>
 
-          {/* Body Metrics Button */}
-          <TouchableOpacity 
-            style={styles.iconBtn} 
-            onPress={() => {
-              safeHaptics.light();
-              onOpenBodyMetrics();
-            }}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="scale-outline" size={17} color={Colors.textSecondary} />
-          </TouchableOpacity>
-
-          {/* Quick Spend Live Pill */}
+          {/* Quick Spend Live Badge */}
           <TouchableOpacity 
             style={styles.spendPill} 
             onPress={() => {
@@ -103,40 +90,34 @@ export const Header: React.FC<HeaderProps> = ({
         </View>
       </View>
 
-      {/* Horizontal Compact Streak Metrics Strip (Zero Clutter) */}
+      {/* Unified Monochromatic Metric Strip (Zero Rainbow Pollution) */}
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.chipsScroll}
       >
         {/* Purity Chip */}
-        <View style={[styles.chip, { borderColor: Colors.emerald + '30', backgroundColor: Colors.emeraldMuted }]}>
-          <Ionicons name="shield-checkmark" size={12} color={Colors.emerald} />
-          <Text style={[styles.chipText, { color: Colors.emerald }]}>
-            Day {purityDays} Clean
-          </Text>
+        <View style={styles.metricChip}>
+          <Ionicons name="shield-checkmark" size={13} color={Colors.primary} />
+          <Text style={styles.metricChipText}>Day {purityDays} Clean</Text>
         </View>
 
         {/* Urges Diverted Chip */}
-        <View style={[styles.chip, { borderColor: Colors.amber + '30', backgroundColor: Colors.amberMuted }]}>
-          <Ionicons name="flash" size={12} color={Colors.amber} />
-          <Text style={[styles.chipText, { color: Colors.amber }]}>
-            {urgeDivertedCount} Diverted
-          </Text>
+        <View style={styles.metricChip}>
+          <Ionicons name="flash-outline" size={13} color={Colors.textSecondary} />
+          <Text style={styles.metricChipText}>{urgeDivertedCount} Diverted</Text>
         </View>
 
         {/* Hydration Chip */}
-        <View style={[styles.chip, { borderColor: Colors.cyan + '30', backgroundColor: Colors.cyanMuted }]}>
-          <Ionicons name="water" size={12} color={Colors.cyan} />
-          <Text style={[styles.chipText, { color: Colors.cyan }]}>
-            {waterMl}ml ({waterPct}%)
-          </Text>
+        <View style={styles.metricChip}>
+          <Ionicons name="water-outline" size={13} color={Colors.textSecondary} />
+          <Text style={styles.metricChipText}>{waterMl}ml ({waterPct}%)</Text>
         </View>
 
         {/* Satiety Discipline Chip */}
-        <View style={[styles.chip, { borderColor: Colors.primary + '30', backgroundColor: Colors.primaryMuted }]}>
-          <Ionicons name="restaurant" size={12} color={Colors.primary} />
-          <Text style={[styles.chipText, { color: Colors.primary }]}>
+        <View style={styles.metricChip}>
+          <Ionicons name="restaurant-outline" size={13} color={Colors.textSecondary} />
+          <Text style={styles.metricChipText}>
             {controlledSatietyDays}/14d {fastingUnlocked ? '• Fasting' : 'Satiety'}
           </Text>
         </View>
@@ -149,7 +130,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
+    paddingBottom: Spacing.xs,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
@@ -161,15 +142,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   appName: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: Colors.textPrimary,
-    letterSpacing: 2,
+    ...Typography.title1,
+    letterSpacing: 1.5,
   },
   dateText: {
-    fontSize: 11,
-    color: Colors.textMuted,
-    fontWeight: '600',
+    ...Typography.caption,
     marginTop: 1,
   },
   topRightRow: {
@@ -180,64 +157,65 @@ const styles = StyleSheet.create({
   phasePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
-  },
-  phasePillText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  iconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
     backgroundColor: Colors.surfaceHighlight,
     borderWidth: 1,
     borderColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
+  },
+  phaseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.primary,
+  },
+  phasePillText: {
+    ...Typography.micro,
+    color: Colors.textSecondary,
+    textTransform: 'none',
   },
   spendPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-    ...Shadows.soft,
-  },
-  spendSymbol: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  spendAmount: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  chipsScroll: {
-    flexDirection: 'row',
-    gap: 6,
-    paddingTop: 6,
-    paddingBottom: 2,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    gap: 3,
+    backgroundColor: Colors.surfaceHighlight,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
+    borderColor: Colors.border,
   },
-  chipText: {
-    fontSize: 10,
-    fontWeight: '800',
+  spendSymbol: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  spendAmount: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  chipsScroll: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingVertical: 6,
+  },
+  metricChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.surfaceHighlight,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  metricChipText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: Colors.textSecondary,
   },
 });

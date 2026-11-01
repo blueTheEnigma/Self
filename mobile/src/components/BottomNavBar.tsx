@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../theme/colors';
 import { safeHaptics } from '../services/haptics';
 
-export type NavTabId = 'today' | 'movement' | 'focus' | 'vault';
+export type NavTabId = 'today' | 'movement' | 'focus' | 'vault' | 'stats';
 
 interface BottomNavBarProps {
   activeTab: NavTabId;
@@ -31,7 +31,6 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
       label: 'Today',
       iconOutline: 'sunny-outline',
       iconFilled: 'sunny',
-      badge: showSundayBadge,
     },
     {
       id: 'movement',
@@ -41,15 +40,22 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
     },
     {
       id: 'focus',
-      label: 'Deep Work',
+      label: 'Focus',
       iconOutline: 'timer-outline',
       iconFilled: 'timer',
     },
     {
       id: 'vault',
-      label: 'Vault & Stats',
+      label: 'Vault',
       iconOutline: 'shield-checkmark-outline',
       iconFilled: 'shield-checkmark',
+    },
+    {
+      id: 'stats',
+      label: 'Stats',
+      iconOutline: 'stats-chart-outline',
+      iconFilled: 'stats-chart',
+      badge: showSundayBadge,
     },
   ];
 
@@ -73,7 +79,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             activeOpacity={0.7}
           >
             <View style={[styles.iconWrapper, isActive && styles.iconWrapperActive]}>
-              <Ionicons name={iconName} size={22} color={iconColor} />
+              <Ionicons name={iconName} size={20} color={iconColor} />
               {tab.badge && !isActive && <View style={styles.dotBadge} />}
             </View>
             <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
@@ -92,9 +98,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
-    paddingTop: 8,
-    paddingBottom: 20, // generous bottom room for modern mobile home indicators
-    paddingHorizontal: Spacing.md,
+    paddingTop: 6,
+    paddingBottom: 16,
+    paddingHorizontal: Spacing.sm,
     ...Shadows.soft,
   },
   tabButton: {
@@ -103,8 +109,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconWrapper: {
-    width: 44,
-    height: 30,
+    width: 38,
+    height: 28,
     borderRadius: BorderRadius.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -116,21 +122,21 @@ const styles = StyleSheet.create({
   dotBadge: {
     position: 'absolute',
     top: 2,
-    right: 8,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    right: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: Colors.amber,
   },
   tabLabel: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
     color: Colors.textMuted,
     marginTop: 2,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   tabLabelActive: {
     color: Colors.primary,
-    fontWeight: '800',
+    fontWeight: '700',
   },
 });
