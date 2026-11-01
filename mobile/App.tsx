@@ -151,6 +151,17 @@ export default function App() {
     setAppState({ ...updated });
   };
 
+  const handleDeleteSpend = async (id: string) => {
+    const updated = await storage.deleteTransaction(id);
+    setAppState({ ...updated });
+  };
+
+  const isSunday = new Date().getDay() === 0;
+  const hasLoggedMetricsToday = appState.bodyMetricsHistory.some(m => m.date === appState.currentDate);
+  const todayStr = appState.currentDate;
+  const todayTransactions = appState.transactions.filter(t => t.timestamp.startsWith(todayStr));
+  const todaySpent = todayTransactions.reduce((acc, t) => acc + t.amount, 0);
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
@@ -212,6 +223,48 @@ export default function App() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* SPECIAL SUNDAY SABBATH BODY METRIC AUDIT PROMPT */}
+            {isSunday && (
+              <TouchableOpacity
+                style={[
+                  styles.sundayAuditCard,
+                  !hasLoggedMetricsToday ? styles.sundayCardPending : styles.sundayCardDone
+                ]}
+                onPress={() => {
+                  safeHaptics.medium();
+                  setShowBodyModal(true);
+                }}
+                activeOpacity={0.8}
+              >
+                <View style={styles.sundayHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons 
+                      name={hasLoggedMetricsToday ? "checkmark-circle" : "scale"} 
+                      size={18} 
+                      color={hasLoggedMetricsToday ? Colors.emerald : Colors.amber} 
+                    />
+                    <Text style={[
+                      styles.sundayTitle, 
+                      { color: hasLoggedMetricsToday ? Colors.emerald : Colors.amber }
+                    ]}>
+                      {hasLoggedMetricsToday 
+                        ? '✓ SUNDAY SABBATH AUDIT LOGGED' 
+                        : '⚡ SUNDAY BODY METRICS AUDIT DUE'}
+                    </Text>
+                  </View>
+                  <Text style={styles.sundayActionPill}>
+                    {hasLoggedMetricsToday ? 'Review ➔' : 'Record Now ➔'}
+                  </Text>
+                </View>
+
+                <Text style={styles.sundayDesc}>
+                  {hasLoggedMetricsToday
+                    ? `Logged: ${appState.bodyWeightKg}kg • ${appState.waistCircumferenceCm}cm waist • ${appState.tummyCircumferenceCm}cm tummy • Level ${appState.anklePainRating} ankle.`
+                    : 'Today is Sunday Sabbath. Measure your weight, waist (cm), tummy (cm), and left ankle strain to verify 7-day compounding progress.'}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* 2. MORNING SPIRITUAL ANCHOR (Prayer & Scripture) */}
             {(activeTab === 'timeline' || dayPhase === 'MORNING_RITUAL') && (
@@ -313,14 +366,18 @@ export default function App() {
             activeOpacity={0.8}
           >
             <Text style={styles.fabSymbol}>₦</Text>
-            <Text style={styles.fabText}>Quick Log</Text>
+            <Text style={styles.fabText}>
+              {todaySpent > 0 ? `₦${todaySpent.toLocaleString()}` : 'Quick Log'}
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* Modals */}
         <QuickSpendModal
           visible={showSpendModal}
+          transactions={appState.transactions}
           onSave={handleQuickSpend}
+          onDelete={handleDeleteSpend}
           onClose={() => setShowSpendModal(false)}
         />
 
@@ -422,6 +479,42 @@ const styles = StyleSheet.create({
   filterTabTextActive: {
     color: '#ffffff',
     fontWeight: '800',
+  },
+  sundayAuditCard: {
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    borderWidth: 1.5,
+    marginBottom: Spacing.md,
+    ...Shadows.card,
+  },
+  sundayCardPending: {
+    backgroundColor: '#fffbeb',
+    borderColor: Colors.amber,
+  },
+  sundayCardDone: {
+    backgroundColor: Colors.surface,
+    borderColor: Colors.emerald,
+  },
+  sundayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  sundayTitle: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  sundayActionPill: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.primary,
+  },
+  sundayDesc: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 17,
   },
   bodyMetricsCard: {
     backgroundColor: Colors.surface,

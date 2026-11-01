@@ -357,6 +357,13 @@ class StorageService {
     return state;
   }
 
+  async deleteTransaction(id: string): Promise<SelfAppState> {
+    const state = await this.loadState();
+    state.transactions = state.transactions.filter(t => t.id !== id);
+    await this.saveState(state);
+    return state;
+  }
+
   // --- Deep Work Focus Block Actions ---
   async recordFocusBlock(project: ProjectFocusTag, durationMinutes: number): Promise<SelfAppState> {
     const state = await this.loadState();

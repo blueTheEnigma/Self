@@ -141,37 +141,69 @@ export const IntegrityCard: React.FC<IntegrityCardProps> = ({
             <View>
               <Text style={styles.purityTitle}>CELIBACY & PURITY SHIELD</Text>
               <Text style={styles.puritySubtitle}>
-                Standard: <Text style={{ color: Colors.emerald, fontWeight: '800' }}>Day {integrity.purityStreakDays} Clean</Text>
+                Current Streak: <Text style={{ color: Colors.emerald, fontWeight: '800' }}>Day {integrity.purityStreakDays} Clean</Text>
               </Text>
             </View>
           </View>
 
           {/* Urge Diverted Trophy Counter */}
           <View style={styles.trophyBadge}>
-            <Ionicons name="flash" size={12} color={Colors.amber} />
+            <Ionicons name="flash" size={13} color={Colors.amber} />
             <Text style={styles.trophyText}>
-              {integrity.urgeDivertedCount} Diverted
+              {integrity.urgeDivertedCount} Urges Conquered
             </Text>
           </View>
         </View>
 
-        {/* Reset / Relapse Log Button */}
+        {/* Battle Stats Row */}
+        <View style={styles.battleStatsRow}>
+          <View style={styles.battleStatBox}>
+            <Text style={styles.battleStatVal}>{integrity.urgeDivertedCount}</Text>
+            <Text style={styles.battleStatLabel}>Urges Diverted</Text>
+          </View>
+          <View style={styles.battleStatBox}>
+            <Text style={[styles.battleStatVal, { color: Colors.emerald }]}>Day {integrity.purityStreakDays}</Text>
+            <Text style={styles.battleStatLabel}>Current Streak</Text>
+          </View>
+          <View style={styles.battleStatBox}>
+            <Text style={[styles.battleStatVal, { color: Colors.textMuted }]}>
+              {integrity.relapseHistory ? integrity.relapseHistory.length : 0}
+            </Text>
+            <Text style={styles.battleStatLabel}>Risen Again</Text>
+          </View>
+        </View>
+
+        {/* Reset / Relapse Log Action */}
         <View style={styles.purityActionsRow}>
-          <Text style={styles.purityHint}>
-            Defenses holding strong. If a breach occurs, log honestly:
-          </Text>
+          <View style={{ flex: 1, marginRight: Spacing.sm }}>
+            <Text style={styles.purityHint}>
+              Every urge deflected builds permanent neural pathways. If you fell:
+            </Text>
+          </View>
           <TouchableOpacity 
             style={styles.relapseBtn}
             onPress={() => {
-              safeHaptics.light();
+              safeHaptics.warning();
               onOpenRelapseModal();
             }}
             activeOpacity={0.7}
           >
-            <Ionicons name="refresh-outline" size={13} color={Colors.ruby} />
-            <Text style={styles.relapseBtnText}>Log Lapse & Reset</Text>
+            <Ionicons name="alert-circle-outline" size={14} color={Colors.ruby} />
+            <Text style={styles.relapseBtnText}>Log Fall & Reset</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Last Lapse Reflection if available */}
+        {integrity.relapseHistory && integrity.relapseHistory.length > 0 && (
+          <View style={styles.lastLapseBox}>
+            <Text style={styles.lastLapseTitle}>
+              PREVIOUS AUDIT ({integrity.relapseHistory[0].date}):
+            </Text>
+            <Text style={styles.lastLapseText}>
+              "{integrity.relapseHistory[0].reflection || 'No reflection recorded'}"
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -407,10 +439,10 @@ const styles = StyleSheet.create({
   relapseBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
     backgroundColor: Colors.surface,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
     borderColor: Colors.ruby + '40',
@@ -419,5 +451,51 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     color: Colors.ruby,
+  },
+  battleStatsRow: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  battleStatBox: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.sm,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  battleStatVal: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: Colors.textPrimary,
+  },
+  battleStatLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.textMuted,
+    marginTop: 2,
+    textTransform: 'uppercase',
+  },
+  lastLapseBox: {
+    marginTop: Spacing.sm,
+    backgroundColor: Colors.surface,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  lastLapseTitle: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.ruby,
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  lastLapseText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
   },
 });

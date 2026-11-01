@@ -89,6 +89,22 @@ export const notificationService = {
           },
         });
       }
+
+      // Weekly Sunday Body Composition & Ankle Audit at 8:00 AM
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '⚖️ Sunday Body Audit Reminder',
+          body: 'Sabbath morning: measure weekly weight, waist, tummy circumference, and left ankle strain.',
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+          weekday: 1, // Sunday
+          hour: 8,
+          minute: 0,
+        },
+      });
     } catch (e) {
       console.warn('Failed to schedule daily notifications:', e);
     }
