@@ -5,7 +5,8 @@ import {
   ScrollView, 
   ActivityIndicator, 
   Text, 
-  TouchableOpacity 
+  TouchableOpacity,
+  ImageBackground 
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
@@ -172,7 +173,12 @@ export default function App() {
       <SafeAreaView style={styles.safeArea}>
         <ExpoStatusBar style="dark" />
 
-        <View style={styles.canvasBackground}>
+        <ImageBackground
+          source={require('./assets/texture.jpg')}
+          style={styles.canvasBackground}
+          imageStyle={styles.textureOverlay}
+          resizeMode="repeat"
+        >
           {/* Top Clean Monochromatic Header */}
           <Header
             currentDate={appState.currentDate}
@@ -285,34 +291,154 @@ export default function App() {
                     />
                   )}
 
-                  {/* 3. Midday / Afternoon Buffer & Satiety */}
+                  {/* 3. Midday / Afternoon Buffer & Satiety Expansive Hero */}
                   {(dayPhase === 'MIDDAY_BUFFER' || dayPhase === 'AFTERNOON_BUFFER') && (
-                    <View style={styles.contentCard}>
+                    <View style={styles.satietyExpansiveCard}>
+                      {/* Top Header */}
                       <View style={styles.cardHeaderRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Ionicons name="restaurant-outline" size={18} color={Colors.primary} />
-                          <Text style={styles.contentCardTitle}>Mindful Satiety Check</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <View style={styles.satietyIconPill}>
+                            <Ionicons name="restaurant-outline" size={18} color={Colors.primary} />
+                          </View>
+                          <View>
+                            <Text style={styles.contentCardTitle}>Mindful Satiety & Temperance</Text>
+                            <Text style={styles.cardSubhead}>80% Fullness Gauge (Hara Hachi Bu)</Text>
+                          </View>
                         </View>
-                        <Text style={styles.cardSubBadge}>Target: Level 3</Text>
+                        <View style={styles.goldenZonePill}>
+                          <Text style={styles.goldenZoneText}>Zone: Level 3</Text>
+                        </View>
                       </View>
-                      <Text style={styles.cardDescriptionText}>
-                        Eat to 80% fullness (Hara Hachi Bu). Stop when satiety is reached; avoid stuffed Level 4 or 5.
-                      </Text>
-                      <TouchableOpacity 
-                        style={styles.primaryActionButton}
-                        onPress={() => {
-                          safeHaptics.light();
-                          setActiveMealModal({
-                            meal: dayPhase === 'MIDDAY_BUFFER' ? 'Breakfast' : 'Lunch',
-                            rating: 3,
-                          });
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.primaryActionText}>
-                          Rate {dayPhase === 'MIDDAY_BUFFER' ? 'Breakfast' : 'Lunch'} Satiety ➔
+
+                      {/* 1–5 Visual Fullness Spectrum */}
+                      <View style={styles.spectrumContainer}>
+                        <Text style={styles.subCardHeader}>HOW FULL DO YOU FEEL RIGHT NOW?</Text>
+                        <View style={styles.spectrumRow}>
+                          {[
+                            { level: 1, label: 'Empty' },
+                            { level: 2, label: 'Light' },
+                            { level: 3, label: '80% Full', golden: true },
+                            { level: 4, label: 'Stuffed' },
+                            { level: 5, label: 'Overfull' },
+                          ].map(item => (
+                            <TouchableOpacity
+                              key={item.level}
+                              style={[
+                                styles.spectrumItem,
+                                item.golden && styles.spectrumItemGolden,
+                              ]}
+                              onPress={() => {
+                                safeHaptics.light();
+                                setActiveMealModal({
+                                  meal: dayPhase === 'MIDDAY_BUFFER' ? 'Breakfast' : 'Lunch',
+                                  rating: item.level,
+                                });
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[
+                                styles.spectrumNumber,
+                                item.golden && styles.spectrumNumberGolden,
+                              ]}>
+                                {item.level}
+                              </Text>
+                              <Text style={[
+                                styles.spectrumLabel,
+                                item.golden && styles.spectrumLabelGolden,
+                              ]}>
+                                {item.label}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+
+                      {/* Today's Meals Audit Matrix */}
+                      <View style={styles.mealsMatrixContainer}>
+                        <Text style={styles.subCardHeader}>TODAY'S MEAL AUDIT</Text>
+                        <View style={styles.mealsList}>
+                          {(['Breakfast', 'Lunch', 'Dinner'] as const).map(meal => {
+                            const log = appState.integrity.fullnessLogs.find(l => l.meal === meal);
+                            return (
+                              <TouchableOpacity
+                                key={meal}
+                                style={styles.mealAuditRow}
+                                onPress={() => {
+                                  safeHaptics.light();
+                                  setActiveMealModal({
+                                    meal,
+                                    rating: log ? log.rating : 3,
+                                  });
+                                }}
+                                activeOpacity={0.7}
+                              >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                  <Ionicons 
+                                    name={log ? "checkmark-circle" : "ellipse-outline"} 
+                                    size={16} 
+                                    color={log ? (log.rating <= 3 ? Colors.primary : Colors.ruby) : Colors.textMuted} 
+                                  />
+                                  <Text style={styles.mealRowName}>{meal}</Text>
+                                  {log?.description ? (
+                                    <Text style={styles.mealRowDesc} numberOfLines={1}>
+                                      • {log.description}
+                                    </Text>
+                                  ) : null}
+                                </View>
+
+                                {log ? (
+                                  <View style={[
+                                    styles.loggedRatingPill,
+                                    log.rating <= 3 ? styles.loggedRatingTeal : styles.loggedRatingRuby
+                                  ]}>
+                                    <Text style={[
+                                      styles.loggedRatingText,
+                                      log.rating <= 3 ? styles.loggedTextTeal : styles.loggedTextRuby
+                                    ]}>
+                                      Level {log.rating} {log.rating === 3 ? '✓ 80%' : (log.rating < 3 ? 'Light' : 'Over')}
+                                    </Text>
+                                  </View>
+                                ) : (
+                                  <Text style={styles.unloggedActionText}>+ Rate Meal</Text>
+                                )}
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </View>
+
+                      {/* Fasting Unlock Progress Bar */}
+                      <View style={styles.fastingProgressBox}>
+                        <View style={styles.fastingHeader}>
+                          <Text style={styles.fastingTitle}>
+                            {appState.integrity.fastingModeUnlocked 
+                              ? '🎉 INTERMITTENT FASTING UNLOCKED' 
+                              : 'INTERMITTENT FASTING MILESTONE'}
+                          </Text>
+                          <Text style={styles.fastingCount}>
+                            {appState.integrity.consecutiveControlledSatietyDays} / 14 Days
+                          </Text>
+                        </View>
+                        <View style={styles.fastingProgressBar}>
+                          <View 
+                            style={[
+                              styles.fastingProgressFill, 
+                              { width: `${Math.min((appState.integrity.consecutiveControlledSatietyDays / 14) * 100, 100)}%` }
+                            ]} 
+                          />
+                        </View>
+                        <Text style={styles.fastingHint}>
+                          Maintain satiety $\le$ Level 3 for 14 consecutive days to unlock Intermittent Fasting mode.
                         </Text>
-                      </TouchableOpacity>
+                      </View>
+
+                      {/* Mindful Eating Neuroscience Cue */}
+                      <View style={styles.neuroscienceTipBox}>
+                        <Ionicons name="bulb-outline" size={15} color={Colors.primary} />
+                        <Text style={styles.neuroscienceTipText}>
+                          <Text style={{ fontWeight: '600' }}>20-Minute Leptin Lag:</Text> Your brain requires 20 minutes from the first bite to register fullness. Put the fork down between bites, hydrate, and stop before stuffed.
+                        </Text>
+                      </View>
                     </View>
                   )}
 
@@ -630,7 +756,7 @@ export default function App() {
             onSelectTab={setActiveNavTab}
             showSundayBadge={isSunday && !hasLoggedMetricsToday}
           />
-        </View>
+        </ImageBackground>
 
         {/* Global Modals */}
         <QuickSpendModal
@@ -692,6 +818,196 @@ const styles = StyleSheet.create({
   canvasBackground: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  textureOverlay: {
+    opacity: 0.25,
+  },
+  satietyExpansiveCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadows.card,
+  },
+  satietyIconPill: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.primaryMuted,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardSubhead: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+    marginTop: 1,
+  },
+  goldenZonePill: {
+    backgroundColor: Colors.primaryMuted,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.primary + '30',
+  },
+  goldenZoneText: {
+    ...Typography.micro,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  spectrumContainer: {
+    marginTop: 14,
+    backgroundColor: Colors.surfaceHighlight,
+    padding: 12,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  spectrumRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 6,
+    marginTop: 6,
+  },
+  spectrumItem: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.sm,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  spectrumItemGolden: {
+    backgroundColor: Colors.primaryMuted,
+    borderColor: Colors.primary,
+    borderWidth: 1.5,
+  },
+  spectrumNumber: {
+    ...Typography.title3,
+    color: Colors.textSecondary,
+  },
+  spectrumNumberGolden: {
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  spectrumLabel: {
+    ...Typography.micro,
+    fontSize: 8,
+    marginTop: 2,
+    color: Colors.textMuted,
+  },
+  spectrumLabelGolden: {
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  mealsMatrixContainer: {
+    marginTop: 14,
+  },
+  mealsList: {
+    gap: 6,
+    marginTop: 6,
+  },
+  mealAuditRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceHighlight,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  mealRowName: {
+    ...Typography.callout,
+    fontWeight: '600',
+  },
+  mealRowDesc: {
+    ...Typography.caption,
+    maxWidth: 130,
+  },
+  loggedRatingPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+  },
+  loggedRatingTeal: {
+    backgroundColor: Colors.primaryMuted,
+  },
+  loggedRatingRuby: {
+    backgroundColor: Colors.rubyMuted,
+  },
+  loggedRatingText: {
+    ...Typography.micro,
+    fontWeight: '700',
+  },
+  loggedTextTeal: {
+    color: Colors.primary,
+  },
+  loggedTextRuby: {
+    color: Colors.ruby,
+  },
+  unloggedActionText: {
+    ...Typography.caption,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  fastingProgressBox: {
+    marginTop: 14,
+    backgroundColor: Colors.surfaceHighlight,
+    padding: 12,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  fastingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  fastingTitle: {
+    ...Typography.micro,
+    color: Colors.primary,
+  },
+  fastingCount: {
+    ...Typography.caption,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  fastingProgressBar: {
+    height: 6,
+    backgroundColor: Colors.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  fastingProgressFill: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+    borderRadius: 3,
+  },
+  fastingHint: {
+    ...Typography.caption,
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  neuroscienceTipBox: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: Colors.primaryMuted,
+    padding: 10,
+    borderRadius: BorderRadius.sm,
+  },
+  neuroscienceTipText: {
+    ...Typography.caption,
+    color: Colors.primary,
+    flex: 1,
+    lineHeight: 16,
   },
   loadingContainer: {
     flex: 1,
