@@ -18,6 +18,8 @@ import {
 } from './src/services/storage';
 import { notificationService } from './src/services/notifications';
 import { Header } from './src/components/Header';
+import { TimeBlocksBar } from './src/components/TimeBlocksBar';
+import { SpiritualAnchorCard } from './src/components/SpiritualAnchorCard';
 import { WorkoutCard } from './src/components/WorkoutCard';
 import { IntegrityCard } from './src/components/IntegrityCard';
 import { FocusTimerCard } from './src/components/FocusTimerCard';
@@ -55,7 +57,6 @@ export default function App() {
       setDayPhase(getCurrentDayPhase());
       setLoading(false);
 
-      // Schedule background alarms for 5:30am, 8:30am, 10:00am, etc.
       notificationService.scheduleDailyRitualAlarms();
     }
     init();
@@ -77,8 +78,18 @@ export default function App() {
   }
 
   // --- Handlers ---
+  const handleToggleSpiritual = async (item: 'wakeup' | 'track' | 'bible', passage?: string) => {
+    const updated = await storage.toggleSpiritual(item, passage);
+    setAppState({ ...updated });
+  };
+
   const handleToggleSet = async (exIndex: number, setIndex: number) => {
     const updated = await storage.toggleWorkoutSet(exIndex, setIndex);
+    setAppState({ ...updated });
+  };
+
+  const handleUpdateWorkoutRpe = async (rpe: number, notes?: string) => {
+    const updated = await storage.updateWorkoutRpe(rpe, notes);
     setAppState({ ...updated });
   };
 
@@ -138,7 +149,6 @@ export default function App() {
       <SafeAreaView style={styles.safeArea}>
         <ExpoStatusBar style="dark" />
 
-        {/* Textured Canvas Background Container */}
         <View style={styles.canvasBackground}>
           {/* Top Header */}
           <Header
@@ -153,12 +163,17 @@ export default function App() {
             onOpenBodyMetrics={() => setShowBodyModal(true)}
           />
 
-          {/* Main Scrollable Timeline */}
           <ScrollView 
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
+            {/* 1. VISUAL TIME-BLOCK SCHEDULE NAVIGATOR */}
+            <TimeBlocksBar
+              currentPhase={dayPhase}
+              onSelectBlock={(phase) => setDayPhase(phase)}
+            />
+
             {/* Filter Navigation Tabs */}
             <View style={styles.filterRow}>
               {[
@@ -190,7 +205,15 @@ export default function App() {
               ))}
             </View>
 
-            {/* 1. KAIZEN WORKOUT MODULE */}
+            {/* 2. MORNING SPIRITUAL ANCHOR (Prayer & Scripture) */}
+            {(activeTab === 'timeline' || dayPhase === 'MORNING_RITUAL') && (
+              <SpiritualAnchorCard
+                spiritual={appState.spiritual}
+                onToggle={handleToggleSpiritual}
+              />
+            )}
+
+            {/* 3. KAIZEN WORKOUT MODULE */}
             {(activeTab === 'timeline' || activeTab === 'workout') && (
               <WorkoutCard
                 workout={appState.workout}
@@ -198,10 +221,11 @@ export default function App() {
                 onToggleSet={handleToggleSet}
                 onAcceptOverload={handleAcceptOverload}
                 onOpenGuide={(guide) => setSelectedGuide(guide)}
+                onUpdateRpe={handleUpdateWorkoutRpe}
               />
             )}
 
-            {/* 2. INTEGRITY & TEMPERANCE MODULE */}
+            {/* 4. INTEGRITY & TEMPERANCE MODULE */}
             {(activeTab === 'timeline' || activeTab === 'integrity') && (
               <IntegrityCard
                 integrity={appState.integrity}
@@ -211,14 +235,14 @@ export default function App() {
               />
             )}
 
-            {/* 3. DEEP WORK FOCUS SHIELD */}
+            {/* 5. DEEP WORK FOCUS SHIELD */}
             {(activeTab === 'timeline' || activeTab === 'focus') && (
               <FocusTimerCard
                 onCompleteBlock={handleCompleteFocusBlock}
               />
             )}
 
-            {/* 4. EVENING SANCTUARY & HOBBIES */}
+            {/* 6. EVENING SANCTUARY & HOBBIES */}
             {activeTab === 'timeline' && (
               <EveningSanctuaryCard
                 sanctuary={appState.sanctuary}
@@ -228,7 +252,7 @@ export default function App() {
               />
             )}
 
-            {/* 5. BODY COMPOSITION & ANKLE HEALTH MIRROR */}
+            {/* 7. BODY COMPOSITION & ANKLE HEALTH MIRROR */}
             {activeTab === 'timeline' && (
               <TouchableOpacity 
                 style={styles.bodyMetricsCard}

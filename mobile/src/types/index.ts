@@ -42,6 +42,13 @@ export interface KaizenOverloadConfig {
   };
 }
 
+export interface SpiritualAnchorState {
+  wakeupPrayerDone: boolean;
+  trackPrayerDone: boolean;
+  bibleReadingDone: boolean;
+  scripturePassage?: string;
+}
+
 export interface FullnessLog {
   meal: 'Breakfast' | 'Lunch' | 'Dinner';
   rating: number; // 1-5 (3 is optimal 80%)
@@ -91,7 +98,7 @@ export interface FocusBlockSession {
 
 export interface HobbyLogEntry {
   type: 'guitar' | 'photo' | 'novel' | 'writing';
-  details: string; // e.g. "Chords practiced", "Lightroom project", "Book title & pp", "Poem title"
+  details: string;
   timestamp: string;
 }
 
@@ -119,6 +126,7 @@ export interface SelfAppState {
   currentDate: string;
   workout: WorkoutSession;
   overloadConfig: KaizenOverloadConfig;
+  spiritual: SpiritualAnchorState;
   integrity: HabitIntegrityState;
   transactions: SpendTransaction[];
   focusBlocks: FocusBlockSession[];

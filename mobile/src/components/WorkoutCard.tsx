@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../theme/colors';
 import { WorkoutSession, KaizenOverloadConfig } from '../types';
@@ -12,6 +12,7 @@ interface WorkoutCardProps {
   onToggleSet: (exerciseIndex: number, setIndex: number) => void;
   onAcceptOverload: () => void;
   onOpenGuide: (guide: ExerciseGuide) => void;
+  onUpdateRpe?: (rpe: number, notes?: string) => void;
 }
 
 export const WorkoutCard: React.FC<WorkoutCardProps> = ({
@@ -20,8 +21,12 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
   onToggleSet,
   onAcceptOverload,
   onOpenGuide,
+  onUpdateRpe,
 }) => {
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
+  const [rpe, setRpe] = useState(workout.rpeRating || 3);
+  const [notes, setNotes] = useState(workout.notes || '');
+  const [notesSaved, setNotesSaved] = useState(false);
 
   useEffect(() => {
     let interval: any = null;
@@ -46,18 +51,36 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
     }
   };
 
+  const handleRpeSelect = (val: number) => {
+    safeHaptics.light();
+    setRpe(val);
+    if (onUpdateRpe) onUpdateRpe(val, notes);
+  };
+
+  const handleSaveNotes = () => {
+    safeHaptics.success();
+    if (onUpdateRpe) onUpdateRpe(rpe, notes);
+    setNotesSaved(true);
+    setTimeout(() => setNotesSaved(false), 2500);
+  };
+
   const pendingOverload = overloadConfig.pendingSuggestion;
+  const isAllSetsDone = workout.exercises.every(e => e.completedSets.every(s => s >= e.target));
 
   return (
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
-          <View style={[styles.iconBox, { backgroundColor: Colors.amberMuted }]}>
-            <Ionicons name="barbell" size={20} color={Colors.amber} />
+          <View style={[styles.iconBox, { backgroundColor: isAllSetsDone ? Colors.emeraldMuted : Colors.amberMuted }]}>
+            <Ionicons 
+              name={isAllSetsDone ? "trophy" : "barbell"} 
+              size={20} 
+              color={isAllSetsDone ? Colors.emerald : Colors.amber} 
+            />
           </View>
           <View>
-            <Text style={styles.cardTitle}>KAIZEN WORKOUT</Text>
+            <Text style={styles.cardTitle}>KAIZEN MOVEMENT</Text>
             <Text style={styles.cardSubtitle}>
               {workout.isRunDay 
                 ? `2.5 km Run + Track Calisthenics` 
@@ -66,11 +89,15 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
           </View>
         </View>
 
-        {workout.completed && (
+        {isAllSetsDone ? (
           <View style={styles.completedBadge}>
             <Ionicons name="checkmark-done" size={14} color={Colors.emerald} />
-            <Text style={styles.completedText}>ALL SETS DONE</Text>
+            <Text style={styles.completedText}>SEALED ✓</Text>
           </View>
+        ) : (
+          <Text style={styles.progressCounter}>
+            {workout.exercises.reduce((acc, ex) => acc + ex.completedSets.filter(s => s > 0).length, 0)} / 12 Sets
+          </Text>
         )}
       </View>
 
@@ -100,8 +127,67 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
         </View>
       )}
 
+      {/* CELEBRATION SUMMARY WHEN ALL SETS ARE DONE */}
+      {isAllSetsDone && (
+        <View style={styles.celebrationCard}>
+          <View style={styles.celebHeader}>
+            <Ionicons name="sparkles" size={18} color={Colors.emerald} />
+            <Text style={styles.celebTitle}>SESSION COMPLETED & REPUTATION SEALED</Text>
+          </View>
+          <Text style={styles.celebDesc}>
+            Total Volume: <Text style={{ fontWeight: '800' }}>30 Pushups | 60s Horse Stance | 60s Hang | 30 Situps</Text>
+          </Text>
+
+          {/* RPE Exertion Rating */}
+          <Text style={styles.rpeLabel}>RATE PHYSICAL EFFORT / RPE (1 TO 5):</Text>
+          <View style={styles.rpeRow}>
+            {[
+              { val: 1, label: 'Easy' },
+              { val: 2, label: 'Light' },
+              { val: 3, label: 'Optimal' },
+              { val: 4, label: 'Hard' },
+              { val: 5, label: 'Max' },
+            ].map(item => (
+              <TouchableOpacity
+                key={item.val}
+                style={[styles.rpeBtn, rpe === item.val && styles.rpeBtnActive]}
+                onPress={() => handleRpeSelect(item.val)}
+              >
+                <Text style={[styles.rpeDigit, rpe === item.val && styles.rpeDigitActive]}>
+                  {item.val}
+                </Text>
+                <Text style={[styles.rpeWord, rpe === item.val && styles.rpeWordActive]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Kaizen Counter */}
+          <View style={styles.kaizenProgressRow}>
+            <Ionicons name="shield-checkmark-outline" size={14} color={Colors.emerald} />
+            <Text style={styles.kaizenProgressText}>
+              Consecutive Clean Sessions: <Text style={{ fontWeight: '800' }}>{overloadConfig.consecutiveCleanSessions} / 3</Text> toward progressive overload.
+            </Text>
+          </View>
+
+          {/* Workout Observation Notes */}
+          <TextInput
+            style={styles.notesInput}
+            placeholder="How did your left ankle and endurance feel today? (Optional)"
+            placeholderTextColor={Colors.textMuted}
+            value={notes}
+            onChangeText={setNotes}
+            onBlur={handleSaveNotes}
+          />
+          {notesSaved && (
+            <Text style={styles.notesSavedNotice}>Notes saved to history ✓</Text>
+          )}
+        </View>
+      )}
+
       {/* Active Rest Countdown */}
-      {restSeconds !== null && (
+      {restSeconds !== null && !isAllSetsDone && (
         <View style={styles.restTimerBanner}>
           <Ionicons name="timer" size={16} color={Colors.cyan} />
           <Text style={styles.restTimerText}>
@@ -256,6 +342,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.emerald,
   },
+  progressCounter: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.textMuted,
+  },
   overloadBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -289,6 +380,99 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 11,
     fontWeight: '800',
+  },
+  celebrationCard: {
+    backgroundColor: Colors.emeraldMuted,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.emerald + '40',
+    marginBottom: Spacing.md,
+  },
+  celebHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  celebTitle: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: Colors.emerald,
+    letterSpacing: 0.5,
+  },
+  celebDesc: {
+    fontSize: 12,
+    color: Colors.textPrimary,
+    lineHeight: 18,
+    marginBottom: Spacing.sm,
+  },
+  rpeLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  rpeRow: {
+    flexDirection: 'row',
+    gap: 4,
+    marginBottom: Spacing.sm,
+  },
+  rpeBtn: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+  },
+  rpeBtnActive: {
+    backgroundColor: Colors.emerald,
+    borderColor: Colors.emerald,
+  },
+  rpeDigit: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  rpeDigitActive: {
+    color: '#ffffff',
+  },
+  rpeWord: {
+    fontSize: 8,
+    fontWeight: '600',
+    color: Colors.textMuted,
+  },
+  rpeWordActive: {
+    color: '#ffffff',
+  },
+  kaizenProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: Spacing.xs,
+  },
+  kaizenProgressText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+  },
+  notesInput: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    fontSize: 11,
+    color: Colors.textPrimary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginTop: 4,
+  },
+  notesSavedNotice: {
+    fontSize: 10,
+    color: Colors.emerald,
+    fontWeight: '700',
+    marginTop: 2,
   },
   restTimerBanner: {
     flexDirection: 'row',

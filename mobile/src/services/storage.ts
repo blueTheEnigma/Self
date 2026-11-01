@@ -6,10 +6,11 @@ import {
   SpendCategory, 
   ProjectFocusTag,
   BodyMetricLog,
-  HobbyLogEntry
+  HobbyLogEntry,
+  SpiritualAnchorState
 } from '../types';
 
-const STORAGE_KEY = '@self_companion_state_v2';
+const STORAGE_KEY = '@self_companion_state_v3';
 
 export function getTodayDateString(): string {
   const d = new Date();
@@ -34,7 +35,7 @@ export function getCurrentDayPhase(): DayPhase {
 }
 
 export function isRunDay(date: Date = new Date()): boolean {
-  const day = date.getDay(); // 0 is Sun, 1 is Mon, 3 is Wed, 5 is Fri
+  const day = date.getDay();
   return day === 1 || day === 3 || day === 5;
 }
 
@@ -89,11 +90,17 @@ export function getInitialState(): SelfAppState {
       situpsTarget: 10,
       consecutiveCleanSessions: 0
     },
+    spiritual: {
+      wakeupPrayerDone: false,
+      trackPrayerDone: false,
+      bibleReadingDone: false,
+      scripturePassage: ''
+    },
     integrity: {
-      waterMl: 500, // Morning 500ml water anchor
+      waterMl: 500,
       waterGoalMl: 3000,
       fullnessLogs: [],
-      purityStreakDays: 1, // Day 1 of No Nut November & Celibacy
+      purityStreakDays: 1,
       consecutiveControlledSatietyDays: 1,
       fastingModeUnlocked: false,
       lastPurityCheckDate: today
@@ -139,7 +146,6 @@ class StorageService {
         const parsed: SelfAppState = JSON.parse(raw);
         const today = getTodayDateString();
         
-        // Reset daily metrics if day changed
         if (parsed.currentDate !== today) {
           parsed.currentDate = today;
           parsed.workout.date = today;
@@ -148,7 +154,10 @@ class StorageService {
           parsed.workout.exercises.forEach(e => {
             e.completedSets = [0, 0, 0];
           });
-          parsed.integrity.waterMl = 500; // Fresh 500ml upon wake
+          parsed.spiritual.wakeupPrayerDone = false;
+          parsed.spiritual.trackPrayerDone = false;
+          parsed.spiritual.bibleReadingDone = false;
+          parsed.integrity.waterMl = 500;
           parsed.integrity.fullnessLogs = [];
           parsed.sanctuary.guitarMinutesToday = 0;
           parsed.sanctuary.microJournalWins = '';
@@ -176,6 +185,19 @@ class StorageService {
     } catch (e) {
       console.error('AsyncStorage write error:', e);
     }
+  }
+
+  // --- Spiritual Anchor Actions ---
+  async toggleSpiritual(item: 'wakeup' | 'track' | 'bible', passage?: string): Promise<SelfAppState> {
+    const state = await this.loadState();
+    if (item === 'wakeup') state.spiritual.wakeupPrayerDone = !state.spiritual.wakeupPrayerDone;
+    if (item === 'track') state.spiritual.trackPrayerDone = !state.spiritual.trackPrayerDone;
+    if (item === 'bible') {
+      state.spiritual.bibleReadingDone = !state.spiritual.bibleReadingDone;
+      if (passage !== undefined) state.spiritual.scripturePassage = passage;
+    }
+    await this.saveState(state);
+    return state;
   }
 
   // --- Kaizen Workout Actions ---
@@ -206,6 +228,14 @@ class StorageService {
       }
     }
 
+    await this.saveState(state);
+    return state;
+  }
+
+  async updateWorkoutRpe(rpe: number, notes?: string): Promise<SelfAppState> {
+    const state = await this.loadState();
+    state.workout.rpeRating = rpe;
+    if (notes !== undefined) state.workout.notes = notes;
     await this.saveState(state);
     return state;
   }
@@ -267,7 +297,6 @@ class StorageService {
       state.integrity.fullnessLogs.push(newLog);
     }
 
-    // Check if daily satiety was controlled (<= 3)
     const allControlled = state.integrity.fullnessLogs.every(l => l.rating <= 3);
     if (allControlled && state.integrity.fullnessLogs.length >= 2) {
       state.integrity.consecutiveControlledSatietyDays += 1;
@@ -275,7 +304,6 @@ class StorageService {
         state.integrity.fastingModeUnlocked = true;
       }
     } else if (rating > 3) {
-      // Gentle pause without punishing streak
       state.integrity.consecutiveControlledSatietyDays = Math.max(state.integrity.consecutiveControlledSatietyDays - 1, 0);
     }
 
