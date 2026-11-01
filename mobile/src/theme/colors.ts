@@ -1,41 +1,46 @@
 export const Colors = {
-  // Alabaster & Warm Parchment Light Theme
-  background: '#f8f9fc',
-  canvasTexture: '#eef2f8',
+  // 60% Dominant Neutral: Alabaster & Warm Parchment Light Theme
+  background: '#faf9f6',
+  canvasTexture: '#f3f2ee',
   surface: '#ffffff',
-  surfaceHighlight: '#f1f5f9',
-  surfaceElevated: '#e2e8f0',
+  surfaceHighlight: '#f4f3ef',
+  surfaceElevated: '#eae8e1',
   
-  // Borders & Dividers
-  border: '#e2e8f0',
-  borderLight: '#cbd5e1',
+  // 30% Structural Borders & Dividers
+  border: '#e6e4dc',
+  borderLight: '#dedbd1',
   borderFocus: '#94a3b8',
 
-  // Primary Luminous Accents (Royal Sapphire)
-  primary: '#2563eb',
-  primaryMuted: '#dbeafe',
-  primaryGlow: 'rgba(37, 99, 235, 0.12)',
+  // 10% Intentional Purpose-Driven Accents (Weinschenk 60-30-10 Rule)
+  // Deep Indigo: Deep Work, Math Sprint, Code Engine
+  primary: '#4338ca',
+  primaryMuted: '#e0e7ff',
+  primaryGlow: 'rgba(67, 56, 202, 0.12)',
 
-  // Semantic Accents
-  emerald: '#059669',       // Purity / Integrity / Satiety
-  emeraldMuted: 'rgba(5, 150, 105, 0.12)',
+  // Sage & Forest Emerald: Health, Purity, Satiety, Habit Consistency
+  emerald: '#0d7a5f',
+  emeraldMuted: 'rgba(13, 122, 95, 0.10)',
   
-  amber: '#d97706',         // Focus / Kaizen / Timer
-  amberMuted: 'rgba(217, 119, 6, 0.12)',
+  // Warm Amber & Terracotta: Mindful Satiety (Level 3), Sabbath Prompts, Rest
+  amber: '#d97706',
+  amberMuted: 'rgba(217, 119, 6, 0.10)',
 
-  ruby: '#e11d48',          // Alerts / Pain / Urge
-  rubyMuted: 'rgba(225, 29, 72, 0.12)',
+  // Crimson & Rose: Urge Defeater Emergency, Pain & Fall Resets
+  ruby: '#e11d48',
+  rubyMuted: 'rgba(225, 29, 72, 0.10)',
 
-  violet: '#7c3aed',        // Creative / Evening Sanctuary
-  violetMuted: 'rgba(124, 58, 237, 0.12)',
+  // Deep Violet: Evening Sanctuary, Guitar, Creative Writing
+  violet: '#6d28d9',
+  violetMuted: 'rgba(109, 40, 217, 0.10)',
 
-  cyan: '#0284c7',          // Hydration
-  cyanMuted: 'rgba(2, 132, 199, 0.12)',
+  // Sky Cyan: Hydration & Morning Freshness
+  cyan: '#0284c7',
+  cyanMuted: 'rgba(2, 132, 199, 0.10)',
 
-  // High-Contrast Light Typography
-  textPrimary: '#0f172a',    // Rich deep slate
-  textSecondary: '#334155',  // Readable charcoal
-  textMuted: '#64748b',      // Subdued metadata
+  // High-Contrast Editorial Typography (Slate on Alabaster)
+  textPrimary: '#0f172a',    // 900 slate (zero-strain crispness)
+  textSecondary: '#334155',  // 700 slate for body & labels
+  textMuted: '#64748b',      // 500 slate for quiet timestamps
   textDisabled: '#94a3b8',
 };
 
@@ -60,22 +65,22 @@ export const Shadows = {
   soft: {
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
     elevation: 2,
   },
   card: {
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
     elevation: 3,
   },
   floating: {
-    shadowColor: '#2563eb',
+    shadowColor: '#4338ca',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
-    elevation: 8,
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    elevation: 6,
   },
 };
