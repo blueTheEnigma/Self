@@ -9,7 +9,8 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "mobile": "npm --prefix mobile run start"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
