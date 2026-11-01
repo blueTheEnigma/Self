@@ -112,7 +112,7 @@ export const UrgeDefeaterModal: React.FC<UrgeDefeaterProps> = ({
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity style={styles.nextBtn} onPress={handleNextStep}>
-                    <Text style={styles.nextBtnText}>Done $\to$ Go to Step 2</Text>
+                    <Text style={styles.nextBtnText}>Done → Go to Step 2</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -138,7 +138,7 @@ export const UrgeDefeaterModal: React.FC<UrgeDefeaterProps> = ({
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity style={styles.nextBtn} onPress={handleNextStep}>
-                    <Text style={styles.nextBtnText}>Done $\to$ Go to Step 3</Text>
+                    <Text style={styles.nextBtnText}>Done → Go to Step 3</Text>
                   </TouchableOpacity>
                 )}
               </View>

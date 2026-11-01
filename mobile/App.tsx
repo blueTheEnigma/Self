@@ -37,10 +37,32 @@ import { RelapseResetModal } from './src/components/RelapseResetModal';
 import { ExerciseGuide } from './src/services/exerciseData';
 import { safeHaptics } from './src/services/haptics';
 
+interface RhythmBlock {
+  id: DayPhase;
+  time: string;
+  name: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
+const RHYTHM_BLOCKS: RhythmBlock[] = [
+  { id: 'MORNING_RITUAL', time: '05:30', name: 'Morning', icon: 'sunny-outline' },
+  { id: 'DEEP_WORK_1', time: '08:30', name: 'Focus 1', icon: 'code-slash-outline' },
+  { id: 'MIDDAY_BUFFER', time: '10:15', name: 'Reset', icon: 'water-outline' },
+  { id: 'DEEP_WORK_2', time: '11:30', name: 'Focus 2', icon: 'calculator-outline' },
+  { id: 'AFTERNOON_BUFFER', time: '13:00', name: 'Lunch', icon: 'restaurant-outline' },
+  { id: 'DEEP_WORK_3', time: '14:30', name: 'Focus 3', icon: 'rocket-outline' },
+  { id: 'LIFE_BUFFER', time: '15:45', name: 'Buffer', icon: 'leaf-outline' },
+  { id: 'EVENING_SANCTUARY', time: '20:00', name: 'Sanctuary', icon: 'musical-notes-outline' },
+  { id: 'NIGHT_REST', time: '21:30', name: 'Rest', icon: 'moon-outline' },
+];
+
 export default function App() {
   const [appState, setAppState] = useState<SelfAppState | null>(null);
   const [dayPhase, setDayPhase] = useState<DayPhase>('MORNING_RITUAL');
+  const [previewPhase, setPreviewPhase] = useState<DayPhase | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const activePhase = previewPhase ?? dayPhase;
 
   // 5 Dedicated Bottom Tabs (Vault & Stats Separated)
   const [activeNavTab, setActiveNavTab] = useState<NavTabId>('today');
@@ -182,7 +204,9 @@ export default function App() {
           {/* Top Clean Monochromatic Header */}
           <Header
             currentDate={appState.currentDate}
-            dayPhase={dayPhase}
+            dayPhase={activePhase}
+            isPreviewing={previewPhase !== null}
+            onResetLive={() => setPreviewPhase(null)}
             waterMl={appState.integrity.waterMl}
             waterGoalMl={appState.integrity.waterGoalMl}
             purityDays={appState.integrity.purityStreakDays}
@@ -246,12 +270,105 @@ export default function App() {
                   </TouchableOpacity>
                 )}
 
+                {/* 24-HOUR RHYTHM STRIP (INTERACTIVE & VISIBLE DAY TRANSITION) */}
+                <View style={styles.rhythmSection}>
+                  <View style={styles.rhythmHeaderRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="time-outline" size={13} color={Colors.primary} />
+                      <Text style={styles.rhythmSectionTitle}>24-HOUR RHYTHM</Text>
+                      {previewPhase ? (
+                        <View style={styles.previewActiveBadge}>
+                          <Text style={styles.previewActiveBadgeText}>Previewing</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.liveClockBadge}>
+                          <View style={styles.livePulseDot} />
+                          <Text style={styles.liveClockBadgeText}>Live Clock</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {previewPhase && (
+                      <TouchableOpacity 
+                        style={styles.returnToLiveButton}
+                        onPress={() => {
+                          safeHaptics.light();
+                          setPreviewPhase(null);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="refresh-outline" size={12} color={Colors.primary} />
+                        <Text style={styles.returnToLiveText}>Return to Live</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.rhythmScrollContent}
+                  >
+                    {RHYTHM_BLOCKS.map(block => {
+                      const isLive = dayPhase === block.id;
+                      const isSelected = activePhase === block.id;
+                      return (
+                        <TouchableOpacity
+                          key={block.id}
+                          style={[
+                            styles.rhythmPill,
+                            isSelected && styles.rhythmPillSelected,
+                            isLive && !isSelected && styles.rhythmPillLiveBorder,
+                          ]}
+                          onPress={() => {
+                            safeHaptics.light();
+                            setPreviewPhase(block.id === dayPhase ? null : block.id);
+                          }}
+                          activeOpacity={0.75}
+                        >
+                          <View style={styles.rhythmPillTop}>
+                            <Ionicons 
+                              name={block.icon} 
+                              size={12} 
+                              color={isSelected ? Colors.primary : Colors.textMuted} 
+                            />
+                            <Text style={[
+                              styles.rhythmPillTime,
+                              isSelected && styles.rhythmPillTimeSelected
+                            ]}>
+                              {block.time}
+                            </Text>
+                            {isLive && <View style={styles.liveSmallDot} />}
+                          </View>
+                          <Text style={[
+                            styles.rhythmPillName,
+                            isSelected && styles.rhythmPillNameSelected
+                          ]}>
+                            {block.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+
                 {/* CURRENT FOCUS HERO CARD (COMFORTABLE FULL WIDTH) */}
                 <View style={styles.heroWrapper}>
-                  <Text style={styles.sectionHeaderLabel}>CURRENT FOCUS</Text>
+                  <View style={styles.heroHeaderRow}>
+                    <Text style={styles.sectionHeaderLabel}>CURRENT FOCUS</Text>
+                    {previewPhase && (
+                      <TouchableOpacity 
+                        onPress={() => {
+                          safeHaptics.light();
+                          setPreviewPhase(null);
+                        }}
+                      >
+                        <Text style={styles.previewSubhint}>• Preview active (Tap to return)</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
 
                   {/* 1. Morning Ritual Active Phase */}
-                  {dayPhase === 'MORNING_RITUAL' && (
+                  {activePhase === 'MORNING_RITUAL' && (
                     <View>
                       <SpiritualAnchorCard
                         spiritual={appState.spiritual}
@@ -285,14 +402,14 @@ export default function App() {
                   )}
 
                   {/* 2. Deep Work Active Phase */}
-                  {(dayPhase === 'DEEP_WORK_1' || dayPhase === 'DEEP_WORK_2' || dayPhase === 'DEEP_WORK_3') && (
+                  {(activePhase === 'DEEP_WORK_1' || activePhase === 'DEEP_WORK_2' || activePhase === 'DEEP_WORK_3') && (
                     <FocusTimerCard
                       onCompleteBlock={handleCompleteFocusBlock}
                     />
                   )}
 
                   {/* 3. Midday / Afternoon Buffer & Satiety Expansive Hero */}
-                  {(dayPhase === 'MIDDAY_BUFFER' || dayPhase === 'AFTERNOON_BUFFER') && (
+                  {(activePhase === 'MIDDAY_BUFFER' || activePhase === 'AFTERNOON_BUFFER') && (
                     <View style={styles.satietyExpansiveCard}>
                       {/* Top Header */}
                       <View style={styles.cardHeaderRow}>
@@ -330,7 +447,7 @@ export default function App() {
                               onPress={() => {
                                 safeHaptics.light();
                                 setActiveMealModal({
-                                  meal: dayPhase === 'MIDDAY_BUFFER' ? 'Breakfast' : 'Lunch',
+                                  meal: activePhase === 'MIDDAY_BUFFER' ? 'Breakfast' : (activePhase === 'AFTERNOON_BUFFER' ? 'Lunch' : 'Dinner'),
                                   rating: item.level,
                                 });
                               }}
@@ -428,7 +545,7 @@ export default function App() {
                           />
                         </View>
                         <Text style={styles.fastingHint}>
-                          Maintain satiety $\le$ Level 3 for 14 consecutive days to unlock Intermittent Fasting mode.
+                          Maintain satiety at Level 3 (80% Full) or below for 14 consecutive days to unlock Intermittent Fasting mode.
                         </Text>
                       </View>
 
@@ -443,7 +560,7 @@ export default function App() {
                   )}
 
                   {/* 4. Evening Sanctuary */}
-                  {dayPhase === 'EVENING_SANCTUARY' && (
+                  {activePhase === 'EVENING_SANCTUARY' && (
                     <EveningSanctuaryCard
                       sanctuary={appState.sanctuary}
                       onAddGuitarMinutes={handleAddGuitar}
@@ -453,15 +570,15 @@ export default function App() {
                   )}
 
                   {/* 5. Night Rest / Life Buffer */}
-                  {(dayPhase === 'NIGHT_REST' || dayPhase === 'LIFE_BUFFER') && (
+                  {(activePhase === 'NIGHT_REST' || activePhase === 'LIFE_BUFFER') && (
                     <View style={styles.contentCard}>
                       <View style={{ alignItems: 'center', paddingVertical: Spacing.md }}>
                         <Ionicons name="moon-outline" size={28} color={Colors.primary} />
                         <Text style={[styles.contentCardTitle, { marginTop: Spacing.sm }]}>
-                          {dayPhase === 'NIGHT_REST' ? 'Sabbath Night Rest' : 'Guilt-Free Life Buffer'}
+                          {activePhase === 'NIGHT_REST' ? 'Sabbath Night Rest' : 'Guilt-Free Life Buffer'}
                         </Text>
                         <Text style={[styles.cardDescriptionText, { textAlign: 'center', marginTop: Spacing.xs }]}>
-                          {dayPhase === 'NIGHT_REST'
+                          {activePhase === 'NIGHT_REST'
                             ? '7 hours of deep restorative sleep enables neuroplastic consolidation and tendon repair for your left ankle.'
                             : 'Open life buffer for errands, reflection, and quiet reading without guilt.'}
                         </Text>
@@ -1029,6 +1146,134 @@ const styles = StyleSheet.create({
   },
   screenContainer: {
     gap: 12,
+  },
+  rhythmSection: {
+    marginBottom: 10,
+  },
+  rhythmHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+    paddingHorizontal: 2,
+  },
+  rhythmSectionTitle: {
+    ...Typography.micro,
+    color: Colors.textSecondary,
+    letterSpacing: 0.8,
+    fontWeight: '700',
+  },
+  liveClockBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primaryMuted,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+  },
+  livePulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.primary,
+  },
+  liveClockBadgeText: {
+    ...Typography.micro,
+    color: Colors.primary,
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  previewActiveBadge: {
+    backgroundColor: Colors.amberMuted,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+  },
+  previewActiveBadgeText: {
+    ...Typography.micro,
+    color: Colors.amber,
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  returnToLiveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  returnToLiveText: {
+    ...Typography.micro,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  rhythmScrollContent: {
+    gap: 8,
+    paddingVertical: 2,
+  },
+  rhythmPill: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    minWidth: 84,
+  },
+  rhythmPillSelected: {
+    backgroundColor: Colors.primaryMuted,
+    borderColor: Colors.primary,
+    borderWidth: 1.5,
+  },
+  rhythmPillLiveBorder: {
+    borderColor: Colors.borderFocus,
+  },
+  rhythmPillTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 2,
+  },
+  rhythmPillTime: {
+    ...Typography.micro,
+    color: Colors.textMuted,
+    fontSize: 10,
+  },
+  rhythmPillTimeSelected: {
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  liveSmallDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: Colors.primary,
+    marginLeft: 'auto',
+  },
+  rhythmPillName: {
+    ...Typography.caption,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  rhythmPillNameSelected: {
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  heroHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  previewSubhint: {
+    ...Typography.micro,
+    color: Colors.primary,
+    fontWeight: '600',
   },
   sectionHeaderLabel: {
     ...Typography.micro,

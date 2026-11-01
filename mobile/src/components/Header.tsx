@@ -9,6 +9,8 @@ import { safeHaptics } from '../services/haptics';
 interface HeaderProps {
   currentDate: string;
   dayPhase: DayPhase;
+  isPreviewing?: boolean;
+  onResetLive?: () => void;
   waterMl: number;
   waterGoalMl: number;
   purityDays: number;
@@ -35,6 +37,8 @@ const PHASE_LABELS: Record<DayPhase, string> = {
 export const Header: React.FC<HeaderProps> = ({
   currentDate,
   dayPhase,
+  isPreviewing = false,
+  onResetLive,
   waterMl,
   waterGoalMl,
   purityDays,
@@ -65,11 +69,20 @@ export const Header: React.FC<HeaderProps> = ({
         </View>
 
         <View style={styles.topRightRow}>
-          {/* Active Phase Quiet Pill */}
-          <View style={styles.phasePill}>
-            <View style={styles.phaseDot} />
-            <Text style={styles.phasePillText}>{phaseLabel}</Text>
-          </View>
+          {/* Active Phase Pill (Tappable to reset to live when previewing) */}
+          <TouchableOpacity 
+            style={[styles.phasePill, isPreviewing && styles.phasePillPreview]}
+            onPress={isPreviewing ? onResetLive : undefined}
+            activeOpacity={isPreviewing ? 0.7 : 1}
+          >
+            <View style={[styles.phaseDot, isPreviewing && styles.phaseDotPreview]} />
+            <Text style={[styles.phasePillText, isPreviewing && styles.phasePillTextPreview]}>
+              {phaseLabel}{isPreviewing ? ' (Preview)' : ''}
+            </Text>
+            {isPreviewing && (
+              <Ionicons name="close-circle" size={13} color={Colors.primary} style={{ marginLeft: 2 }} />
+            )}
+          </TouchableOpacity>
 
           {/* Quick Spend Live Badge */}
           <TouchableOpacity 
@@ -175,6 +188,17 @@ const styles = StyleSheet.create({
     ...Typography.micro,
     color: Colors.textSecondary,
     textTransform: 'none',
+  },
+  phasePillPreview: {
+    backgroundColor: Colors.primaryMuted,
+    borderColor: Colors.primary,
+  },
+  phaseDotPreview: {
+    backgroundColor: Colors.primary,
+  },
+  phasePillTextPreview: {
+    color: Colors.primary,
+    fontWeight: '700',
   },
   spendPill: {
     flexDirection: 'row',

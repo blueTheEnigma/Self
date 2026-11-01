@@ -11,10 +11,11 @@ export const Colors = {
   borderLight: '#edf2f7',
   borderFocus: '#94a3b8',
 
-  // Deep Nordic Teal (Primary Signature Tint - Selected by User)
-  primary: '#0f766e',           // Deep Mineral Teal (Calm, sharp, disciplined)
+  // Radiant Nordic Teal (Primary Signature Tint - Vibrant, Modern, Clean)
+  primary: '#0d9488',           // Vibrant Modern Teal (Crisp blue-green, eliminates forest green darkness)
   primaryMuted: '#f0fdfa',      // Soft teal mist for active pills and subtle badges
-  primaryGlow: 'rgba(15, 118, 110, 0.08)',
+  primaryBorder: '#ccfbf1',     // Light teal border for active highlights
+  primaryGlow: 'rgba(13, 148, 136, 0.12)',
 
   // Monochromatic Neutral Accents
   slateDark: '#0f172a',
@@ -29,7 +30,7 @@ export const Colors = {
   amberMuted: '#fffbeb',
 
   // Health / Satiety (Unified with Teal)
-  emerald: '#0f766e',
+  emerald: '#0d9488',
   emeraldMuted: '#f0fdfa',
 
   // Soft Cyan for Water
@@ -76,7 +77,7 @@ export const Shadows = {
     elevation: 2,
   },
   floating: {
-    shadowColor: '#0f766e',
+    shadowColor: '#0d9488',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
     shadowRadius: 10,
