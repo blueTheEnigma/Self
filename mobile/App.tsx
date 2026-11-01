@@ -3,20 +3,20 @@ import {
   StyleSheet, 
   View, 
   ScrollView, 
-  SafeAreaView, 
   ActivityIndicator,
   Text,
   TouchableOpacity
 } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from './src/theme/colors';
+import { Colors, Spacing, BorderRadius, Shadows } from './src/theme/colors';
 import { SelfAppState, DayPhase } from './src/types';
 import { 
   storage, 
-  getCurrentDayPhase, 
-  getTodayDateString 
+  getCurrentDayPhase 
 } from './src/services/storage';
+import { notificationService } from './src/services/notifications';
 import { Header } from './src/components/Header';
 import { WorkoutCard } from './src/components/WorkoutCard';
 import { IntegrityCard } from './src/components/IntegrityCard';
@@ -25,6 +25,8 @@ import { EveningSanctuaryCard } from './src/components/EveningSanctuaryCard';
 import { QuickSpendModal } from './src/components/QuickSpendModal';
 import { UrgeDefeaterModal } from './src/components/UrgeDefeaterModal';
 import { ExerciseTechniqueModal } from './src/components/ExerciseTechniqueModal';
+import { MealLoggingModal } from './src/components/MealLoggingModal';
+import { BodyMetricsModal } from './src/components/BodyMetricsModal';
 import { ExerciseGuide } from './src/services/exerciseData';
 import { safeHaptics } from './src/services/haptics';
 
@@ -36,9 +38,14 @@ export default function App() {
   // Modals state
   const [showSpendModal, setShowSpendModal] = useState(false);
   const [showUrgeModal, setShowUrgeModal] = useState(false);
+  const [showBodyModal, setShowBodyModal] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState<ExerciseGuide | null>(null);
+  const [activeMealModal, setActiveMealModal] = useState<{
+    meal: 'Breakfast' | 'Lunch' | 'Dinner';
+    rating: number;
+  } | null>(null);
 
-  // Active view tab filter (Timeline vs Focused Mode)
+  // Active view tab filter
   const [activeTab, setActiveTab] = useState<'timeline' | 'workout' | 'focus' | 'integrity'>('timeline');
 
   useEffect(() => {
@@ -47,10 +54,12 @@ export default function App() {
       setAppState(state);
       setDayPhase(getCurrentDayPhase());
       setLoading(false);
+
+      // Schedule background alarms for 5:30am, 8:30am, 10:00am, etc.
+      notificationService.scheduleDailyRitualAlarms();
     }
     init();
 
-    // Check phase every minute
     const phaseInterval = setInterval(() => {
       setDayPhase(getCurrentDayPhase());
     }, 60000);
@@ -83,8 +92,14 @@ export default function App() {
     setAppState({ ...updated });
   };
 
-  const handleLogFullness = async (meal: 'Breakfast' | 'Lunch' | 'Dinner', rating: number) => {
-    const updated = await storage.logMealFullness(meal, rating);
+  const handleSaveMealSatiety = async (rating: number, description?: string, trigger?: string) => {
+    if (!activeMealModal) return;
+    const updated = await storage.logMealFullness(activeMealModal.meal, rating, description, trigger);
+    setAppState({ ...updated });
+  };
+
+  const handleSaveWeeklyBodyMetrics = async (w: number, wa: number, t: number, a: number) => {
+    const updated = await storage.logWeeklyBodyMetrics(w, wa, t, a);
     setAppState({ ...updated });
   };
 
@@ -98,13 +113,13 @@ export default function App() {
     setAppState({ ...updated });
   };
 
-  const handleAddGuitar = async (mins: number) => {
-    const updated = await storage.addGuitarMinutes(mins);
+  const handleAddGuitar = async (mins: number, details?: string) => {
+    const updated = await storage.addGuitarMinutes(mins, details);
     setAppState({ ...updated });
   };
 
-  const handleToggleCreative = async (quest: 'photo' | 'novel' | 'writing') => {
-    const updated = await storage.toggleCreativeQuest(quest);
+  const handleLogHobby = async (type: 'photo' | 'novel' | 'writing', details: string) => {
+    const updated = await storage.logHobbySession(type, details);
     setAppState({ ...updated });
   };
 
@@ -119,164 +134,206 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ExpoStatusBar style="light" />
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea}>
+        <ExpoStatusBar style="dark" />
 
-      {/* Top Header */}
-      <Header
-        currentDate={appState.currentDate}
-        dayPhase={dayPhase}
-        waterMl={appState.integrity.waterMl}
-        waterGoalMl={appState.integrity.waterGoalMl}
-        purityDays={appState.integrity.purityStreakDays}
-        onOpenSpend={() => setShowSpendModal(true)}
-      />
+        {/* Textured Canvas Background Container */}
+        <View style={styles.canvasBackground}>
+          {/* Top Header */}
+          <Header
+            currentDate={appState.currentDate}
+            dayPhase={dayPhase}
+            waterMl={appState.integrity.waterMl}
+            waterGoalMl={appState.integrity.waterGoalMl}
+            purityDays={appState.integrity.purityStreakDays}
+            controlledSatietyDays={appState.integrity.consecutiveControlledSatietyDays}
+            fastingUnlocked={appState.integrity.fastingModeUnlocked}
+            onOpenSpend={() => setShowSpendModal(true)}
+            onOpenBodyMetrics={() => setShowBodyModal(true)}
+          />
 
-      {/* Main Scrollable Timeline */}
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Navigation Filters */}
-        <View style={styles.filterRow}>
-          {[
-            { id: 'timeline', label: 'Timeline' },
-            { id: 'workout', label: 'Kaizen Workout' },
-            { id: 'focus', label: 'Deep Work' },
-            { id: 'integrity', label: 'Integrity' },
-          ].map(tab => (
-            <TouchableOpacity
-              key={tab.id}
-              style={[
-                styles.filterTab, 
-                activeTab === tab.id && styles.filterTabActive
-              ]}
-              onPress={() => {
-                safeHaptics.light();
-                setActiveTab(tab.id as any);
-              }}
-            >
-              <Text 
-                style={[
-                  styles.filterTabText, 
-                  activeTab === tab.id && styles.filterTabTextActive
-                ]}
+          {/* Main Scrollable Timeline */}
+          <ScrollView 
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Filter Navigation Tabs */}
+            <View style={styles.filterRow}>
+              {[
+                { id: 'timeline', label: 'Timeline' },
+                { id: 'workout', label: 'Kaizen Movement' },
+                { id: 'focus', label: 'Deep Work' },
+                { id: 'integrity', label: 'Integrity' },
+              ].map(tab => (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={[
+                    styles.filterTab, 
+                    activeTab === tab.id && styles.filterTabActive
+                  ]}
+                  onPress={() => {
+                    safeHaptics.light();
+                    setActiveTab(tab.id as any);
+                  }}
+                >
+                  <Text 
+                    style={[
+                      styles.filterTabText, 
+                      activeTab === tab.id && styles.filterTabTextActive
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* 1. KAIZEN WORKOUT MODULE */}
+            {(activeTab === 'timeline' || activeTab === 'workout') && (
+              <WorkoutCard
+                workout={appState.workout}
+                overloadConfig={appState.overloadConfig}
+                onToggleSet={handleToggleSet}
+                onAcceptOverload={handleAcceptOverload}
+                onOpenGuide={(guide) => setSelectedGuide(guide)}
+              />
+            )}
+
+            {/* 2. INTEGRITY & TEMPERANCE MODULE */}
+            {(activeTab === 'timeline' || activeTab === 'integrity') && (
+              <IntegrityCard
+                integrity={appState.integrity}
+                onAddWater={handleAddWater}
+                onOpenMealModal={(meal, rating) => setActiveMealModal({ meal, rating })}
+                onOpenUrgeDefeater={() => setShowUrgeModal(true)}
+              />
+            )}
+
+            {/* 3. DEEP WORK FOCUS SHIELD */}
+            {(activeTab === 'timeline' || activeTab === 'focus') && (
+              <FocusTimerCard
+                onCompleteBlock={handleCompleteFocusBlock}
+              />
+            )}
+
+            {/* 4. EVENING SANCTUARY & HOBBIES */}
+            {activeTab === 'timeline' && (
+              <EveningSanctuaryCard
+                sanctuary={appState.sanctuary}
+                onAddGuitarMinutes={handleAddGuitar}
+                onLogHobby={handleLogHobby}
+                onSaveJournal={handleSaveJournal}
+              />
+            )}
+
+            {/* 5. BODY COMPOSITION & ANKLE HEALTH MIRROR */}
+            {activeTab === 'timeline' && (
+              <TouchableOpacity 
+                style={styles.bodyMetricsCard}
+                onPress={() => {
+                  safeHaptics.light();
+                  setShowBodyModal(true);
+                }}
+                activeOpacity={0.8}
               >
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <View style={styles.bodyHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="scale" size={16} color={Colors.emerald} />
+                    <Text style={styles.bodyTitle}>BODY COMPOSITION & ANKLE STATUS</Text>
+                  </View>
+                  <Text style={styles.bodyTapPrompt}>Tap to audit weekly ➔</Text>
+                </View>
+
+                <View style={styles.statsGrid}>
+                  <View style={styles.metricBox}>
+                    <Text style={styles.metricVal}>{appState.bodyWeightKg} kg</Text>
+                    <Text style={styles.metricLabel}>Weight</Text>
+                  </View>
+                  <View style={styles.metricBox}>
+                    <Text style={styles.metricVal}>{appState.waistCircumferenceCm} cm</Text>
+                    <Text style={styles.metricLabel}>Waist</Text>
+                  </View>
+                  <View style={styles.metricBox}>
+                    <Text style={styles.metricVal}>{appState.tummyCircumferenceCm} cm</Text>
+                    <Text style={styles.metricLabel}>Tummy</Text>
+                  </View>
+                  <View style={styles.metricBox}>
+                    <Text style={[styles.metricVal, { color: Colors.amber }]}>Level {appState.anklePainRating}</Text>
+                    <Text style={styles.metricLabel}>Ankle Strain</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+
+            <View style={{ height: 70 }} />
+          </ScrollView>
+
+          {/* Floating Quick Spend Dock */}
+          <TouchableOpacity 
+            style={styles.floatingSpendFab}
+            onPress={() => {
+              safeHaptics.medium();
+              setShowSpendModal(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.fabSymbol}>₦</Text>
+            <Text style={styles.fabText}>Quick Log</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* 1. KAIZEN WORKOUT MODULE */}
-        {(activeTab === 'timeline' || activeTab === 'workout') && (
-          <WorkoutCard
-            workout={appState.workout}
-            overloadConfig={appState.overloadConfig}
-            onToggleSet={handleToggleSet}
-            onAcceptOverload={handleAcceptOverload}
-            onOpenGuide={(guide) => setSelectedGuide(guide)}
+        {/* Modals */}
+        <QuickSpendModal
+          visible={showSpendModal}
+          onSave={handleQuickSpend}
+          onClose={() => setShowSpendModal(false)}
+        />
+
+        <UrgeDefeaterModal
+          visible={showUrgeModal}
+          onConquer={handleUrgeConquered}
+          onClose={() => setShowUrgeModal(false)}
+        />
+
+        <ExerciseTechniqueModal
+          visible={selectedGuide !== null}
+          guide={selectedGuide}
+          onClose={() => setSelectedGuide(null)}
+        />
+
+        {activeMealModal && (
+          <MealLoggingModal
+            visible={activeMealModal !== null}
+            meal={activeMealModal.meal}
+            initialRating={activeMealModal.rating}
+            onSave={handleSaveMealSatiety}
+            onClose={() => setActiveMealModal(null)}
           />
         )}
 
-        {/* 2. INTEGRITY & TEMPERANCE MODULE */}
-        {(activeTab === 'timeline' || activeTab === 'integrity') && (
-          <IntegrityCard
-            integrity={appState.integrity}
-            onAddWater={handleAddWater}
-            onLogFullness={handleLogFullness}
-            onOpenUrgeDefeater={() => setShowUrgeModal(true)}
-          />
-        )}
-
-        {/* 3. DEEP WORK FOCUS SHIELD */}
-        {(activeTab === 'timeline' || activeTab === 'focus') && (
-          <FocusTimerCard
-            onCompleteBlock={handleCompleteFocusBlock}
-          />
-        )}
-
-        {/* 4. EVENING SANCTUARY & HOBBIES */}
-        {activeTab === 'timeline' && (
-          <EveningSanctuaryCard
-            sanctuary={appState.sanctuary}
-            onAddGuitarMinutes={handleAddGuitar}
-            onToggleCreativeQuest={handleToggleCreative}
-            onSaveJournal={handleSaveJournal}
-          />
-        )}
-
-        {/* 5. BODY STATS & ANKLE HEALTH MIRROR */}
-        {activeTab === 'timeline' && (
-          <View style={styles.bodyMetricsCard}>
-            <View style={styles.bodyHeader}>
-              <Ionicons name="fitness-outline" size={16} color={Colors.emerald} />
-              <Text style={styles.bodyTitle}>BODY COMPOSITION & ANKLE HEALTH</Text>
-            </View>
-
-            <View style={styles.statsGrid}>
-              <View style={styles.metricBox}>
-                <Text style={styles.metricVal}>{appState.bodyWeightKg} kg</Text>
-                <Text style={styles.metricLabel}>Weight</Text>
-              </View>
-              <View style={styles.metricBox}>
-                <Text style={styles.metricVal}>{appState.waistCircumferenceCm} cm</Text>
-                <Text style={styles.metricLabel}>Waist</Text>
-              </View>
-              <View style={styles.metricBox}>
-                <Text style={styles.metricVal}>{appState.tummyCircumferenceCm} cm</Text>
-                <Text style={styles.metricLabel}>Tummy</Text>
-              </View>
-              <View style={styles.metricBox}>
-                <Text style={[styles.metricVal, { color: Colors.amber }]}>Level {appState.anklePainRating}</Text>
-                <Text style={styles.metricLabel}>Ankle Strain</Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Bottom Spacing */}
-        <View style={{ height: 60 }} />
-      </ScrollView>
-
-      {/* Floating Action Quick Spend Dock */}
-      <TouchableOpacity 
-        style={styles.floatingSpendFab}
-        onPress={() => {
-          safeHaptics.medium();
-          setShowSpendModal(true);
-        }}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.fabSymbol}>₦</Text>
-        <Text style={styles.fabText}>Quick Log</Text>
-      </TouchableOpacity>
-
-      {/* Modals */}
-      <QuickSpendModal
-        visible={showSpendModal}
-        onSave={handleQuickSpend}
-        onClose={() => setShowSpendModal(false)}
-      />
-
-      <UrgeDefeaterModal
-        visible={showUrgeModal}
-        onConquer={handleUrgeConquered}
-        onClose={() => setShowUrgeModal(false)}
-      />
-
-      <ExerciseTechniqueModal
-        visible={selectedGuide !== null}
-        guide={selectedGuide}
-        onClose={() => setSelectedGuide(null)}
-      />
-    </SafeAreaView>
+        <BodyMetricsModal
+          visible={showBodyModal}
+          currentWeight={appState.bodyWeightKg}
+          currentWaist={appState.waistCircumferenceCm}
+          currentTummy={appState.tummyCircumferenceCm}
+          currentAnkle={appState.anklePainRating}
+          history={appState.bodyMetricsHistory}
+          onSave={handleSaveWeeklyBodyMetrics}
+          onClose={() => setShowBodyModal(false)}
+        />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  canvasBackground: {
     flex: 1,
     backgroundColor: Colors.background,
   },
@@ -306,24 +363,25 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   filterTab: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surfaceHighlight,
+    backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
+    ...Shadows.soft,
   },
   filterTabActive: {
-    backgroundColor: Colors.primaryGlow,
+    backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
   filterTabText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.textSecondary,
   },
   filterTabTextActive: {
-    color: Colors.primary,
+    color: '#ffffff',
     fontWeight: '800',
   },
   bodyMetricsCard: {
@@ -333,11 +391,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: Spacing.md,
+    ...Shadows.card,
   },
   bodyHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 6,
     marginBottom: Spacing.sm,
   },
   bodyTitle: {
@@ -345,6 +404,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.emerald,
     letterSpacing: 0.5,
+  },
+  bodyTapPrompt: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.primary,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -367,27 +431,23 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 9,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.textMuted,
     marginTop: 2,
     textTransform: 'uppercase',
   },
   floatingSpendFab: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 22,
     right: 20,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: Colors.primary,
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: BorderRadius.full,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 8,
+    ...Shadows.floating,
   },
   fabSymbol: {
     color: '#ffffff',

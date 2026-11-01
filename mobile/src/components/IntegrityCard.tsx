@@ -1,38 +1,32 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from '../theme/colors';
+import { Colors, Spacing, BorderRadius, Shadows } from '../theme/colors';
 import { HabitIntegrityState } from '../types';
 import { safeHaptics } from '../services/haptics';
 
 interface IntegrityCardProps {
   integrity: HabitIntegrityState;
   onAddWater: (ml: number) => void;
-  onLogFullness: (meal: 'Breakfast' | 'Lunch' | 'Dinner', rating: number) => void;
+  onOpenMealModal: (meal: 'Breakfast' | 'Lunch' | 'Dinner', currentRating: number) => void;
   onOpenUrgeDefeater: () => void;
 }
 
 export const IntegrityCard: React.FC<IntegrityCardProps> = ({
   integrity,
   onAddWater,
-  onLogFullness,
+  onOpenMealModal,
   onOpenUrgeDefeater,
 }) => {
   const waterPct = Math.min(Math.round((integrity.waterMl / integrity.waterGoalMl) * 100), 100);
 
-  const getMealRating = (meal: 'Breakfast' | 'Lunch' | 'Dinner'): number | null => {
-    const found = integrity.fullnessLogs.find(f => f.meal === meal);
-    return found ? found.rating : null;
+  const getMealLog = (meal: 'Breakfast' | 'Lunch' | 'Dinner') => {
+    return integrity.fullnessLogs.find(f => f.meal === meal);
   };
 
   const handleWaterTap = () => {
     safeHaptics.medium();
     onAddWater(500);
-  };
-
-  const handleFullnessTap = (meal: 'Breakfast' | 'Lunch' | 'Dinner', rating: number) => {
-    safeHaptics.light();
-    onLogFullness(meal, rating);
   };
 
   return (
@@ -41,7 +35,7 @@ export const IntegrityCard: React.FC<IntegrityCardProps> = ({
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <View style={[styles.iconBox, { backgroundColor: Colors.cyanMuted }]}>
-            <Ionicons name="shield-checkmark-outline" size={20} color={Colors.cyan} />
+            <Ionicons name="shield-checkmark" size={20} color={Colors.cyan} />
           </View>
           <View>
             <Text style={styles.cardTitle}>INTEGRITY & TEMPERANCE</Text>
@@ -67,14 +61,13 @@ export const IntegrityCard: React.FC<IntegrityCardProps> = ({
         <View style={styles.pillarHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Ionicons name="water" size={16} color={Colors.cyan} />
-            <Text style={styles.pillarLabel}>DAILY HYDRATION</Text>
+            <Text style={styles.pillarLabel}>DAILY HYDRATION ANCHOR</Text>
           </View>
           <Text style={styles.pillarMetric}>
             {integrity.waterMl} / {integrity.waterGoalMl} ml ({waterPct}%)
           </Text>
         </View>
 
-        {/* Progress Bar */}
         <View style={styles.progressBarTrack}>
           <View style={[styles.progressBarFill, { width: `${waterPct}%` }]} />
         </View>
@@ -84,57 +77,55 @@ export const IntegrityCard: React.FC<IntegrityCardProps> = ({
           onPress={handleWaterTap}
           activeOpacity={0.7}
         >
-          <Ionicons name="add" size={16} color={Colors.cyan} />
+          <Ionicons name="add-circle" size={18} color={Colors.cyan} />
           <Text style={styles.waterTapText}>Drink 500ml Glass (Anchor)</Text>
         </TouchableOpacity>
       </View>
 
-      {/* PILLAR 2: Satiety & Gluttony Guard (Hara Hachi Bu 80% Rule) */}
+      {/* PILLAR 2: Satiety & Gluttony Guard */}
       <View style={styles.pillarSection}>
         <View style={styles.pillarHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Ionicons name="restaurant-outline" size={16} color={Colors.emerald} />
+            <Ionicons name="restaurant" size={16} color={Colors.emerald} />
             <Text style={styles.pillarLabel}>SATIETY SCALE (80% FULL RULE)</Text>
           </View>
-          <Text style={styles.ruleBadge}>Target: Level 3 (Satisfied)</Text>
+          <Text style={styles.ruleBadge}>Target: Level 3</Text>
         </View>
 
         <View style={styles.mealsContainer}>
           {(['Breakfast', 'Lunch', 'Dinner'] as const).map(meal => {
-            const currentRating = getMealRating(meal);
+            const log = getMealLog(meal);
+            const currentRating = log ? log.rating : 3;
 
             return (
-              <View key={meal} style={styles.mealRow}>
-                <Text style={styles.mealName}>{meal}</Text>
-                <View style={styles.ratingPillsGroup}>
-                  {[1, 2, 3, 4, 5].map(r => {
-                    const isSelected = currentRating === r;
-                    const isGold = r === 3; // The 80% sweet spot
-
-                    return (
-                      <TouchableOpacity
-                        key={r}
-                        style={[
-                          styles.ratingPill,
-                          isSelected && (isGold ? styles.goldPill : styles.selectedPill),
-                        ]}
-                        onPress={() => handleFullnessTap(meal, r)}
-                        activeOpacity={0.7}
-                      >
-                        <Text
-                          style={[
-                            styles.ratingPillText,
-                            isSelected && styles.selectedPillText,
-                            isGold && !isSelected && styles.goldPillTextMuted,
-                          ]}
-                        >
-                          {r}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+              <TouchableOpacity 
+                key={meal} 
+                style={styles.mealRow}
+                onPress={() => {
+                  safeHaptics.light();
+                  onOpenMealModal(meal, currentRating);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.mealName}>{meal}</Text>
+                  {log?.description ? (
+                    <Text style={styles.mealDesc} numberOfLines={1}>{log.description}</Text>
+                  ) : (
+                    <Text style={styles.mealTapPrompt}>Tap to log fullness & food...</Text>
+                  )}
                 </View>
-              </View>
+
+                {log ? (
+                  <View style={[styles.ratingBadge, log.rating === 3 ? styles.goldBadge : (log.rating > 3 ? styles.redBadge : styles.blueBadge)]}>
+                    <Text style={styles.ratingBadgeText}>Level {log.rating}</Text>
+                  </View>
+                ) : (
+                  <View style={styles.unloggedBadge}>
+                    <Text style={styles.unloggedBadgeText}>+ Rate</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
             );
           })}
         </View>
@@ -143,15 +134,15 @@ export const IntegrityCard: React.FC<IntegrityCardProps> = ({
       {/* PILLAR 3: Discreet Purity Shield */}
       <View style={styles.puritySection}>
         <View style={styles.purityLeft}>
-          <Ionicons name="shield" size={18} color={Colors.emerald} />
+          <Ionicons name="shield-checkmark" size={20} color={Colors.emerald} />
           <View>
-            <Text style={styles.purityTitle}>PURITY & CELIBACY SHIELD</Text>
+            <Text style={styles.purityTitle}>CELIBACY & PURITY SHIELD</Text>
             <Text style={styles.puritySubtitle}>
-              November Standard: <Text style={{ color: Colors.emerald, fontWeight: '700' }}>Day {integrity.purityStreakDays} Clean</Text>
+              Standard: <Text style={{ color: Colors.emerald, fontWeight: '800' }}>Day {integrity.purityStreakDays} Clean</Text>
             </Text>
           </View>
         </View>
-        <Ionicons name="lock-closed" size={16} color={Colors.textMuted} />
+        <Ionicons name="lock-closed" size={16} color={Colors.emerald} />
       </View>
     </View>
   );
@@ -165,12 +156,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: Spacing.md,
+    ...Shadows.card,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -200,14 +192,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: Colors.ruby,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: BorderRadius.full,
-    shadowColor: Colors.ruby,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 3,
+    ...Shadows.soft,
   },
   urgeBtnText: {
     color: '#ffffff',
@@ -215,7 +203,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   pillarSection: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   pillarHeader: {
     flexDirection: 'row',
@@ -239,7 +227,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceHighlight,
     borderRadius: 4,
     overflow: 'hidden',
-    marginVertical: Spacing.xs,
+    marginVertical: 4,
   },
   progressBarFill: {
     height: '100%',
@@ -252,15 +240,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     backgroundColor: Colors.cyanMuted,
-    paddingVertical: 8,
+    paddingVertical: 9,
     borderRadius: BorderRadius.md,
     marginTop: Spacing.xs,
-    borderWidth: 1,
-    borderColor: Colors.cyan + '40',
   },
   waterTapText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.cyan,
   },
   ruleBadge: {
@@ -270,53 +256,66 @@ const styles = StyleSheet.create({
   },
   mealsContainer: {
     marginTop: Spacing.xs,
-    gap: Spacing.xs,
+    gap: 6,
   },
   mealRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 3,
+    backgroundColor: Colors.surfaceHighlight,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   mealName: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '800',
     color: Colors.textPrimary,
   },
-  ratingPillsGroup: {
-    flexDirection: 'row',
-    gap: 4,
+  mealDesc: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginTop: 1,
   },
-  ratingPill: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.surfaceHighlight,
+  mealTapPrompt: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    fontStyle: 'italic',
+    marginTop: 1,
+  },
+  ratingBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+  },
+  goldBadge: {
+    backgroundColor: Colors.emerald,
+  },
+  redBadge: {
+    backgroundColor: Colors.ruby,
+  },
+  blueBadge: {
+    backgroundColor: Colors.primary,
+  },
+  ratingBadgeText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  unloggedBadge: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
     borderWidth: 1,
     borderColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  goldPillTextMuted: {
-    color: Colors.emerald,
-    fontWeight: '700',
-  },
-  selectedPill: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  goldPill: {
-    backgroundColor: Colors.emerald,
-    borderColor: Colors.emerald,
-  },
-  ratingPillText: {
-    fontSize: 11,
-    fontWeight: '600',
+  unloggedBadgeText: {
     color: Colors.textSecondary,
-  },
-  selectedPillText: {
-    color: '#ffffff',
-    fontWeight: '900',
+    fontSize: 11,
+    fontWeight: '700',
   },
   puritySection: {
     flexDirection: 'row',
@@ -326,7 +325,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderColor: Colors.emerald + '40',
+    borderColor: Colors.emerald + '30',
   },
   purityLeft: {
     flexDirection: 'row',
@@ -342,7 +341,6 @@ const styles = StyleSheet.create({
   puritySubtitle: {
     fontSize: 12,
     color: Colors.textPrimary,
-    marginTop: 2,
+    marginTop: 1,
   },
 });
-

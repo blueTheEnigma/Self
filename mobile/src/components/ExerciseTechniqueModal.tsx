@@ -10,7 +10,7 @@ import {
   Linking 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from '../theme/colors';
+import { Colors, Spacing, BorderRadius, Shadows } from '../theme/colors';
 import { ExerciseGuide } from '../services/exerciseData';
 import { safeHaptics } from '../services/haptics';
 
@@ -27,7 +27,6 @@ export const ExerciseTechniqueModal: React.FC<TechniqueModalProps> = ({
 }) => {
   const animValue = useRef(new Animated.Value(0)).current;
 
-  // Visual Form Loop Animation
   useEffect(() => {
     if (visible) {
       Animated.loop(
@@ -58,12 +57,12 @@ export const ExerciseTechniqueModal: React.FC<TechniqueModalProps> = ({
 
   const translateY = animValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 24],
+    outputRange: [0, 26],
   });
 
   const scale = animValue.interpolate({
     inputRange: [0, 0.5, 1],
-    outputRange: [1, 1.08, 1],
+    outputRange: [1, 1.1, 1],
   });
 
   return (
@@ -75,7 +74,7 @@ export const ExerciseTechniqueModal: React.FC<TechniqueModalProps> = ({
     >
       <View style={styles.overlay}>
         <View style={styles.sheetContainer}>
-          {/* Header Bar */}
+          {/* Header */}
           <View style={styles.header}>
             <View>
               <View style={styles.badgeRow}>
@@ -99,17 +98,15 @@ export const ExerciseTechniqueModal: React.FC<TechniqueModalProps> = ({
             {/* Visual Movement Animation Card */}
             <View style={styles.animationCard}>
               <View style={styles.animHeader}>
-                <Ionicons name="body-outline" size={16} color={Colors.primary} />
+                <Ionicons name="body" size={16} color={Colors.primary} />
                 <Text style={styles.animTitle}>FORM & MOTION LOOP</Text>
               </View>
               
               <View style={styles.stageContainer}>
-                {/* Visual Position Nodes */}
                 <View style={styles.nodeTop}>
                   <Text style={styles.nodeLabel}>{guide.animationFrames.startLabel}</Text>
                 </View>
 
-                {/* Animated Form Indicator Pulse */}
                 <Animated.View 
                   style={[
                     styles.movingIndicator, 
@@ -118,7 +115,6 @@ export const ExerciseTechniqueModal: React.FC<TechniqueModalProps> = ({
                     }
                   ]}
                 >
-                  <View style={styles.pulseCore} />
                   <Ionicons name="arrow-down" size={16} color="#ffffff" />
                 </Animated.View>
 
@@ -184,7 +180,7 @@ export const ExerciseTechniqueModal: React.FC<TechniqueModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     justifyContent: 'flex-end',
   },
   sheetContainer: {
@@ -212,7 +208,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     color: Colors.primary,
-    backgroundColor: Colors.primaryGlow,
+    backgroundColor: Colors.primaryMuted,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: BorderRadius.full,
@@ -229,7 +225,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '900',
     color: Colors.textPrimary,
   },
   closeBtn: {
@@ -278,17 +274,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surfaceElevated,
+    backgroundColor: Colors.surfaceHighlight,
   },
   nodeBottom: {
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surfaceElevated,
+    backgroundColor: Colors.surfaceHighlight,
   },
   nodeLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.textSecondary,
   },
   movingIndicator: {
@@ -298,19 +294,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  pulseCore: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.4)',
+    ...Shadows.soft,
   },
   musclesText: {
     fontSize: 12,
@@ -319,7 +303,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   boldText: {
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.textPrimary,
   },
   section: {
@@ -374,16 +358,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
+    ...Shadows.soft,
   },
   videoButtonText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });
-

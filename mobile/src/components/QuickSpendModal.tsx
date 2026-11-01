@@ -7,7 +7,7 @@ import {
   TouchableOpacity 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from '../theme/colors';
+import { Colors, Spacing, BorderRadius, Shadows } from '../theme/colors';
 import { SpendCategory } from '../types';
 import { safeHaptics } from '../services/haptics';
 
@@ -34,7 +34,7 @@ export const QuickSpendModal: React.FC<QuickSpendProps> = ({
 
   const handleDigit = (digit: string) => {
     safeHaptics.light();
-    if (amountStr.length >= 7) return; // cap at 9,999,999
+    if (amountStr.length >= 7) return;
     setAmountStr(prev => prev + digit);
   };
 
@@ -72,8 +72,8 @@ export const QuickSpendModal: React.FC<QuickSpendProps> = ({
           {/* Header */}
           <View style={styles.header}>
             <View>
-              <Text style={styles.sheetTitle}>INSTANT 3-SECOND LOG</Text>
-              <Text style={styles.sheetSubtitle}>Zero-friction micro expense capture</Text>
+              <Text style={styles.sheetTitle}>INSTANT 3-SECOND EXPENSE LOG</Text>
+              <Text style={styles.sheetSubtitle}>Zero-friction micro capture</Text>
             </View>
             <TouchableOpacity 
               style={styles.closeBtn}
@@ -155,7 +155,7 @@ export const QuickSpendModal: React.FC<QuickSpendProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     justifyContent: 'flex-end',
   },
   sheetContainer: {
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   sheetTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     color: Colors.primary,
     letterSpacing: 1,
@@ -232,12 +232,13 @@ const styles = StyleSheet.create({
   },
   tagBtn: {
     flex: 1,
-    backgroundColor: Colors.surfaceElevated,
+    backgroundColor: Colors.surfaceHighlight,
     paddingVertical: 10,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.primaryMuted,
+    borderColor: Colors.border,
+    ...Shadows.soft,
   },
   tagEmoji: {
     fontSize: 18,
@@ -277,4 +278,3 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
-

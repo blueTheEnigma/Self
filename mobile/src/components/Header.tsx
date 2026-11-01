@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from '../theme/colors';
+import { Colors, Spacing, BorderRadius, Shadows } from '../theme/colors';
 import { DayPhase } from '../types';
+import { safeHaptics } from '../services/haptics';
 
 interface HeaderProps {
   currentDate: string;
@@ -10,19 +11,22 @@ interface HeaderProps {
   waterMl: number;
   waterGoalMl: number;
   purityDays: number;
+  controlledSatietyDays: number;
+  fastingUnlocked: boolean;
   onOpenSpend: () => void;
+  onOpenBodyMetrics: () => void;
 }
 
-const PHASE_NAMES: Record<DayPhase, { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }> = {
-  MORNING_RITUAL: { label: 'Morning Ritual', icon: 'sunny-outline', color: Colors.amber },
-  DEEP_WORK_1: { label: 'Focus 1: Code Engine', icon: 'code-slash-outline', color: Colors.primary },
-  MIDDAY_BUFFER: { label: 'Midday Reset & Hydrate', icon: 'water-outline', color: Colors.cyan },
-  DEEP_WORK_2: { label: 'Focus 2: Math Sprint', icon: 'calculator-outline', color: Colors.primary },
-  AFTERNOON_BUFFER: { label: 'Lunch & Life Buffer', icon: 'restaurant-outline', color: Colors.textSecondary },
-  DEEP_WORK_3: { label: 'Focus 3: Fellowships', icon: 'school-outline', color: Colors.violet },
-  LIFE_BUFFER: { label: 'Open Life Buffer', icon: 'walk-outline', color: Colors.textSecondary },
-  EVENING_SANCTUARY: { label: 'Evening Sanctuary', icon: 'moon-outline', color: Colors.violet },
-  NIGHT_REST: { label: 'Sabbath / Night Rest', icon: 'bed-outline', color: Colors.textMuted },
+const PHASE_NAMES: Record<DayPhase, { label: string; icon: keyof typeof Ionicons.glyphMap; color: string; desc: string }> = {
+  MORNING_RITUAL: { label: 'Morning Ritual', icon: 'sunny', color: Colors.amber, desc: 'Hydrate, Prayer & 2.5km Movement' },
+  DEEP_WORK_1: { label: 'Focus 1: Code Engine', icon: 'code-slash', color: Colors.primary, desc: 'Quant Bot / Paper Thoughts (90m Cap)' },
+  MIDDAY_BUFFER: { label: 'Midday Reset & Hydrate', icon: 'water', color: Colors.cyan, desc: 'Step Away from Screens & Breathe' },
+  DEEP_WORK_2: { label: 'Focus 2: Math Sprint', icon: 'calculator', color: Colors.primary, desc: 'MIT OCW Multivariable Calculus' },
+  AFTERNOON_BUFFER: { label: 'Lunch & Life Buffer', icon: 'restaurant', color: Colors.emerald, desc: 'Mindful Satiety (Level 3 Target)' },
+  DEEP_WORK_3: { label: 'Focus 3: Fellowships', icon: 'school', color: Colors.violet, desc: 'Applications & Technical Paper' },
+  LIFE_BUFFER: { label: 'Open Life Buffer', icon: 'walk', color: Colors.textSecondary, desc: 'Zero Guilt Life & Errands Buffer' },
+  EVENING_SANCTUARY: { label: 'Evening Sanctuary', icon: 'moon', color: Colors.violet, desc: '15m Guitar, Novels & Creative Art' },
+  NIGHT_REST: { label: 'Sabbath / Night Rest', icon: 'bed', color: Colors.textMuted, desc: '7 Hours Deep Restorative Sleep' },
 };
 
 export const Header: React.FC<HeaderProps> = ({
@@ -31,44 +35,49 @@ export const Header: React.FC<HeaderProps> = ({
   waterMl,
   waterGoalMl,
   purityDays,
+  controlledSatietyDays,
+  fastingUnlocked,
   onOpenSpend,
+  onOpenBodyMetrics,
 }) => {
   const phaseInfo = PHASE_NAMES[dayPhase];
   const waterPct = Math.min(Math.round((waterMl / waterGoalMl) * 100), 100);
 
-  // Format date nicely: e.g. "Sunday, Nov 1"
   const dateObj = new Date(currentDate);
   const formattedDate = dateObj.toLocaleDateString('en-US', {
-    weekday: 'short',
+    weekday: 'long',
     month: 'short',
     day: 'numeric',
   });
 
   return (
     <View style={styles.container}>
+      {/* Top App Bar */}
       <View style={styles.topRow}>
         <View>
           <Text style={styles.appName}>SELF</Text>
           <Text style={styles.dateText}>{formattedDate}</Text>
         </View>
 
-        <View style={styles.statsRow}>
-          {/* Water Mini Pill */}
-          <View style={styles.statPill}>
-            <Ionicons name="water" size={14} color={Colors.cyan} />
-            <Text style={styles.statPillText}>{waterMl}ml</Text>
-          </View>
+        <View style={styles.topButtonsRow}>
+          {/* Body Metrics Button */}
+          <TouchableOpacity 
+            style={styles.headerIconBtn} 
+            onPress={() => {
+              safeHaptics.light();
+              onOpenBodyMetrics();
+            }}
+          >
+            <Ionicons name="scale-outline" size={18} color={Colors.textSecondary} />
+          </TouchableOpacity>
 
-          {/* Purity Mini Pill */}
-          <View style={[styles.statPill, styles.purityPill]}>
-            <Ionicons name="shield-checkmark" size={14} color={Colors.emerald} />
-            <Text style={[styles.statPillText, { color: Colors.emerald }]}>Day {purityDays}</Text>
-          </View>
-
-          {/* Quick Spend Button */}
+          {/* Quick Spend ₦ Button */}
           <TouchableOpacity 
             style={styles.spendButton} 
-            onPress={onOpenSpend}
+            onPress={() => {
+              safeHaptics.medium();
+              onOpenSpend();
+            }}
             activeOpacity={0.8}
           >
             <Text style={styles.spendButtonText}>₦</Text>
@@ -76,17 +85,50 @@ export const Header: React.FC<HeaderProps> = ({
         </View>
       </View>
 
-      {/* Dynamic Contextual Phase Banner */}
-      <View style={[styles.phaseBanner, { borderColor: phaseInfo.color + '40' }]}>
-        <View style={styles.phaseLeft}>
-          <Ionicons name={phaseInfo.icon} size={18} color={phaseInfo.color} />
-          <View style={styles.phaseTextGroup}>
-            <Text style={styles.phaseTitle}>ACTIVE PHASE</Text>
-            <Text style={[styles.phaseLabel, { color: phaseInfo.color }]}>{phaseInfo.label}</Text>
+      {/* PROMINENT INTEGRITY STREAK BANNER */}
+      <View style={styles.integrityBanner}>
+        <View style={styles.streakCol}>
+          <View style={styles.streakLabelRow}>
+            <Ionicons name="shield-checkmark" size={15} color={Colors.emerald} />
+            <Text style={styles.streakLabel}>CELIBACY & PURITY</Text>
           </View>
+          <Text style={styles.streakCount}>Day {purityDays} Clean</Text>
         </View>
-        <View style={styles.phaseRight}>
-          <Text style={styles.waterPctText}>{waterPct}% Water</Text>
+
+        <View style={styles.divider} />
+
+        <View style={styles.streakCol}>
+          <View style={styles.streakLabelRow}>
+            <Ionicons name="restaurant" size={14} color={Colors.emerald} />
+            <Text style={styles.streakLabel}>SATIETY DISCIPLINE</Text>
+          </View>
+          <Text style={styles.streakCount}>
+            {controlledSatietyDays} / 14d {fastingUnlocked ? '⚡ Fasting Unlocked' : 'to Fasting'}
+          </Text>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.streakCol}>
+          <View style={styles.streakLabelRow}>
+            <Ionicons name="water" size={14} color={Colors.cyan} />
+            <Text style={styles.streakLabel}>HYDRATION</Text>
+          </View>
+          <Text style={[styles.streakCount, { color: Colors.cyan }]}>{waterMl}ml ({waterPct}%)</Text>
+        </View>
+      </View>
+
+      {/* Dynamic Contextual Phase Card */}
+      <View style={[styles.phaseBanner, { borderLeftColor: phaseInfo.color }]}>
+        <View style={styles.phaseLeft}>
+          <View style={[styles.phaseIconBox, { backgroundColor: phaseInfo.color + '15' }]}>
+            <Ionicons name={phaseInfo.icon} size={18} color={phaseInfo.color} />
+          </View>
+          <View style={styles.phaseTextGroup}>
+            <Text style={styles.phaseTitle}>CURRENT FOCUS PHASE</Text>
+            <Text style={[styles.phaseLabel, { color: phaseInfo.color }]}>{phaseInfo.label}</Text>
+            <Text style={styles.phaseDesc}>{phaseInfo.desc}</Text>
+          </View>
         </View>
       </View>
     </View>
@@ -96,7 +138,7 @@ export const Header: React.FC<HeaderProps> = ({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
+    paddingTop: Spacing.md,
     paddingBottom: Spacing.sm,
     backgroundColor: Colors.background,
   },
@@ -104,72 +146,110 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   appName: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
     color: Colors.textPrimary,
     letterSpacing: 2,
   },
   dateText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-    marginTop: 2,
+    fontSize: 12,
+    color: Colors.textMuted,
+    fontWeight: '600',
+    marginTop: 1,
   },
-  statsRow: {
+  topButtonsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
   },
-  statPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.surfaceHighlight,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
-  },
-  purityPill: {
-    borderColor: Colors.emerald + '40',
-  },
-  statPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadows.soft,
   },
   spendButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 4,
+    ...Shadows.soft,
   },
   spendButtonText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '900',
   },
-  phaseBanner: {
+  integrityBanner: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: Spacing.sm,
+    ...Shadows.soft,
+  },
+  streakCol: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  streakLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginBottom: 2,
+  },
+  streakLabel: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: Colors.textMuted,
+    letterSpacing: 0.5,
+  },
+  streakCount: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  divider: {
+    width: 1,
+    height: 24,
+    backgroundColor: Colors.border,
+  },
+  phaseBanner: {
     backgroundColor: Colors.surface,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingVertical: 10,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
+    borderColor: Colors.border,
+    borderLeftWidth: 4,
+    ...Shadows.soft,
   },
   phaseLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+  },
+  phaseIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   phaseTextGroup: {
     flexDirection: 'column',
@@ -178,19 +258,15 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
     color: Colors.textMuted,
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   phaseLabel: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
   },
-  phaseRight: {
-    alignItems: 'flex-end',
-  },
-  waterPctText: {
+  phaseDesc: {
     fontSize: 11,
-    fontWeight: '600',
-    color: Colors.cyan,
+    color: Colors.textSecondary,
+    marginTop: 1,
   },
 });
-

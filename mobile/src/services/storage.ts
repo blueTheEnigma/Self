@@ -4,10 +4,12 @@ import {
   DayPhase, 
   WorkoutSession, 
   SpendCategory, 
-  ProjectFocusTag 
+  ProjectFocusTag,
+  BodyMetricLog,
+  HobbyLogEntry
 } from '../types';
 
-const STORAGE_KEY = '@self_companion_state_v1';
+const STORAGE_KEY = '@self_companion_state_v2';
 
 export function getTodayDateString(): string {
   const d = new Date();
@@ -34,10 +36,6 @@ export function getCurrentDayPhase(): DayPhase {
 export function isRunDay(date: Date = new Date()): boolean {
   const day = date.getDay(); // 0 is Sun, 1 is Mon, 3 is Wed, 5 is Fri
   return day === 1 || day === 3 || day === 5;
-}
-
-export function isSabbathDay(date: Date = new Date()): boolean {
-  return date.getDay() === 0;
 }
 
 export function getInitialState(): SelfAppState {
@@ -95,7 +93,9 @@ export function getInitialState(): SelfAppState {
       waterMl: 500, // Morning 500ml water anchor
       waterGoalMl: 3000,
       fullnessLogs: [],
-      purityStreakDays: 1, // Day 1 of No Nut November
+      purityStreakDays: 1, // Day 1 of No Nut November & Celibacy
+      consecutiveControlledSatietyDays: 1,
+      fastingModeUnlocked: false,
       lastPurityCheckDate: today
     },
     transactions: [],
@@ -105,6 +105,7 @@ export function getInitialState(): SelfAppState {
       photoEditingThisWeek: false,
       novelReadingThisWeek: false,
       poemStoryThisWeek: false,
+      hobbyLogs: [],
       microJournalWins: '',
       microJournalFriction: '',
       tomorrowAnchor: 'Quant Bot & Multivariable Calculus',
@@ -113,7 +114,16 @@ export function getInitialState(): SelfAppState {
     bodyWeightKg: 96.5,
     waistCircumferenceCm: 90,
     tummyCircumferenceCm: 100,
-    anklePainRating: 2 // slight ache from recent runs
+    anklePainRating: 2,
+    bodyMetricsHistory: [
+      {
+        date: today,
+        weightKg: 96.5,
+        waistCm: 90,
+        tummyCm: 100,
+        ankleStrain: 2
+      }
+    ]
   };
 }
 
@@ -143,6 +153,7 @@ class StorageService {
           parsed.sanctuary.guitarMinutesToday = 0;
           parsed.sanctuary.microJournalWins = '';
           parsed.sanctuary.microJournalFriction = '';
+          parsed.integrity.purityStreakDays += 1;
         }
 
         this.cache = parsed;
@@ -175,18 +186,16 @@ class StorageService {
 
     const currentVal = ex.completedSets[setIndex];
     if (currentVal > 0) {
-      ex.completedSets[setIndex] = 0; // untoggle
+      ex.completedSets[setIndex] = 0;
     } else {
       ex.completedSets[setIndex] = value !== undefined ? value : ex.target;
     }
 
-    // Check if entire workout completed
     const allDone = state.workout.exercises.every(e => e.completedSets.every(s => s >= e.target));
     if (allDone && !state.workout.completed) {
       state.workout.completed = true;
       state.overloadConfig.consecutiveCleanSessions += 1;
 
-      // 3-Session Kaizen Overload Rule trigger!
       if (state.overloadConfig.consecutiveCleanSessions >= 3) {
         state.overloadConfig.pendingSuggestion = {
           exercise: 'Pushups',
@@ -215,7 +224,6 @@ class StorageService {
         state.overloadConfig.situpsTarget = suggestion.newTarget;
       }
       
-      // Update targets on active exercises
       state.workout.exercises.forEach(e => {
         if (e.name === suggestion.exercise) {
           e.target = suggestion.newTarget;
@@ -229,7 +237,7 @@ class StorageService {
     return state;
   }
 
-  // --- Integrity & Habit Actions ---
+  // --- Integrity, Hydration & Satiety Actions ---
   async addWater(ml: number = 500): Promise<SelfAppState> {
     const state = await this.loadState();
     state.integrity.waterMl = Math.min(state.integrity.waterMl + ml, 5000);
@@ -237,15 +245,40 @@ class StorageService {
     return state;
   }
 
-  async logMealFullness(meal: 'Breakfast' | 'Lunch' | 'Dinner', rating: number): Promise<SelfAppState> {
+  async logMealFullness(
+    meal: 'Breakfast' | 'Lunch' | 'Dinner', 
+    rating: number,
+    description?: string,
+    trigger?: string
+  ): Promise<SelfAppState> {
     const state = await this.loadState();
     const existing = state.integrity.fullnessLogs.findIndex(f => f.meal === meal);
-    const newLog = { meal, rating, timestamp: new Date().toISOString() };
+    const newLog = { 
+      meal, 
+      rating, 
+      description,
+      trigger,
+      timestamp: new Date().toISOString() 
+    };
+
     if (existing >= 0) {
       state.integrity.fullnessLogs[existing] = newLog;
     } else {
       state.integrity.fullnessLogs.push(newLog);
     }
+
+    // Check if daily satiety was controlled (<= 3)
+    const allControlled = state.integrity.fullnessLogs.every(l => l.rating <= 3);
+    if (allControlled && state.integrity.fullnessLogs.length >= 2) {
+      state.integrity.consecutiveControlledSatietyDays += 1;
+      if (state.integrity.consecutiveControlledSatietyDays >= 14) {
+        state.integrity.fastingModeUnlocked = true;
+      }
+    } else if (rating > 3) {
+      // Gentle pause without punishing streak
+      state.integrity.consecutiveControlledSatietyDays = Math.max(state.integrity.consecutiveControlledSatietyDays - 1, 0);
+    }
+
     await this.saveState(state);
     return state;
   }
@@ -289,19 +322,33 @@ class StorageService {
     return state;
   }
 
-  // --- Evening Sanctuary Actions ---
-  async addGuitarMinutes(mins: number = 15): Promise<SelfAppState> {
+  // --- Evening Sanctuary & Hobbies Actions ---
+  async addGuitarMinutes(mins: number = 15, details?: string): Promise<SelfAppState> {
     const state = await this.loadState();
     state.sanctuary.guitarMinutesToday += mins;
+    if (details) {
+      state.sanctuary.hobbyLogs.unshift({
+        type: 'guitar',
+        details,
+        timestamp: new Date().toISOString()
+      });
+    }
     await this.saveState(state);
     return state;
   }
 
-  async toggleCreativeQuest(quest: 'photo' | 'novel' | 'writing'): Promise<SelfAppState> {
+  async logHobbySession(type: 'photo' | 'novel' | 'writing', details: string): Promise<SelfAppState> {
     const state = await this.loadState();
-    if (quest === 'photo') state.sanctuary.photoEditingThisWeek = !state.sanctuary.photoEditingThisWeek;
-    if (quest === 'novel') state.sanctuary.novelReadingThisWeek = !state.sanctuary.novelReadingThisWeek;
-    if (quest === 'writing') state.sanctuary.poemStoryThisWeek = !state.sanctuary.poemStoryThisWeek;
+    if (type === 'photo') state.sanctuary.photoEditingThisWeek = true;
+    if (type === 'novel') state.sanctuary.novelReadingThisWeek = true;
+    if (type === 'writing') state.sanctuary.poemStoryThisWeek = true;
+
+    state.sanctuary.hobbyLogs.unshift({
+      type,
+      details,
+      timestamp: new Date().toISOString()
+    });
+
     await this.saveState(state);
     return state;
   }
@@ -314,7 +361,32 @@ class StorageService {
     await this.saveState(state);
     return state;
   }
+
+  // --- Weekly Body Metrics Logging ---
+  async logWeeklyBodyMetrics(
+    weightKg: number, 
+    waistCm: number, 
+    tummyCm: number, 
+    ankleStrain: number
+  ): Promise<SelfAppState> {
+    const state = await this.loadState();
+    state.bodyWeightKg = weightKg;
+    state.waistCircumferenceCm = waistCm;
+    state.tummyCircumferenceCm = tummyCm;
+    state.anklePainRating = ankleStrain;
+
+    const newLog: BodyMetricLog = {
+      date: getTodayDateString(),
+      weightKg,
+      waistCm,
+      tummyCm,
+      ankleStrain
+    };
+
+    state.bodyMetricsHistory.unshift(newLog);
+    await this.saveState(state);
+    return state;
+  }
 }
 
 export const storage = new StorageService();
-

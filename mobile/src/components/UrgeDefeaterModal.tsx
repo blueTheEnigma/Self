@@ -7,7 +7,7 @@ import {
   TouchableOpacity 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from '../theme/colors';
+import { Colors, Spacing, BorderRadius, Shadows } from '../theme/colors';
 import { safeHaptics } from '../services/haptics';
 
 interface UrgeDefeaterProps {
@@ -101,7 +101,7 @@ export const UrgeDefeaterModal: React.FC<UrgeDefeaterProps> = ({
                 Go to the sink right now. Splash ice-cold water onto your face for 30 seconds or drink a cold 300ml glass of water.
               </Text>
               <Text style={styles.stepScience}>
-                🧠 <Text style={{ fontWeight: '700' }}>Neuroscience:</Text> Activates the mammalian dive reflex, immediately lowering heart rate and shattering the dopamine compulsion loop.
+                🧠 <Text style={{ fontWeight: '800' }}>Neuroscience:</Text> Activates the mammalian dive reflex, immediately lowering heart rate and shattering the dopamine craving loop.
               </Text>
 
               <View style={styles.timerBox}>
@@ -127,7 +127,7 @@ export const UrgeDefeaterModal: React.FC<UrgeDefeaterProps> = ({
                 Drop into a deep Horse Stance immediately. Grip the floor with your toes. Take 5 slow, deep nasal breaths into your lower belly.
               </Text>
               <Text style={styles.stepScience}>
-                ⚡ <Text style={{ fontWeight: '700' }}>Physiology:</Text> Channels the biological adrenaline surge away from the prefrontal craving center into your large leg muscles.
+                ⚡ <Text style={{ fontWeight: '800' }}>Physiology:</Text> Channels the adrenaline rush away from the brain craving center into your large leg muscles.
               </Text>
 
               <View style={styles.timerBox}>
@@ -151,7 +151,7 @@ export const UrgeDefeaterModal: React.FC<UrgeDefeaterProps> = ({
               <Text style={styles.stepTitle}>STEP 3: GROUNDING PRAYER</Text>
               <View style={styles.prayerCard}>
                 <Text style={styles.prayerText}>
-                  "Lord, grant me temperance and strength. I run my body; my flesh does not run me. I am building discipline for my future, my mind, and my calling."
+                  "Lord, grant me temperance and strength. I run my body; my flesh does not run me. I am building discipline for my calling, my mind, and my future."
                 </Text>
               </View>
 
@@ -182,7 +182,7 @@ export const UrgeDefeaterModal: React.FC<UrgeDefeaterProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: Spacing.lg,
@@ -193,8 +193,9 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     padding: Spacing.xl,
     borderWidth: 1,
-    borderColor: Colors.ruby + '60',
+    borderColor: Colors.ruby + '40',
     alignItems: 'center',
+    ...Shadows.card,
   },
   header: {
     alignItems: 'center',
@@ -208,11 +209,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.sm,
-    shadowColor: Colors.ruby,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 6,
+    ...Shadows.soft,
   },
   title: {
     fontSize: 16,
@@ -223,7 +220,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 12,
     color: Colors.ruby,
-    fontWeight: '600',
+    fontWeight: '700',
     marginTop: 2,
   },
   stepsRow: {
@@ -264,7 +261,7 @@ const styles = StyleSheet.create({
   },
   stepScience: {
     fontSize: 11,
-    color: Colors.textMuted,
+    color: Colors.textSecondary,
     backgroundColor: Colors.surfaceHighlight,
     padding: Spacing.sm,
     borderRadius: BorderRadius.md,
@@ -278,7 +275,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   timerDisplay: {
-    fontSize: 36,
+    fontSize: 38,
     fontWeight: '900',
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
@@ -330,11 +327,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
     marginTop: Spacing.sm,
-    shadowColor: Colors.emerald,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
+    ...Shadows.soft,
   },
   conquerBtnText: {
     color: '#ffffff',
@@ -351,4 +344,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

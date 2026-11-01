@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from '../theme/colors';
+import { Colors, Spacing, BorderRadius, Shadows } from '../theme/colors';
 import { ProjectFocusTag } from '../types';
 import { safeHaptics } from '../services/haptics';
 
@@ -21,7 +21,7 @@ export const FocusTimerCard: React.FC<FocusTimerCardProps> = ({
   onCompleteBlock,
 }) => {
   const [selectedProject, setSelectedProject] = useState<ProjectFocusTag>('Quant Bot');
-  const [targetMinutes, setTargetMinutes] = useState(90); // 90m hard cap
+  const [targetMinutes, setTargetMinutes] = useState(90);
   const [secondsRemaining, setSecondsRemaining] = useState(90 * 60);
   const [isActive, setIsActive] = useState(false);
   const [isRestCooldown, setIsRestCooldown] = useState(false);
@@ -37,12 +37,10 @@ export const FocusTimerCard: React.FC<FocusTimerCardProps> = ({
       setIsActive(false);
 
       if (!isRestCooldown) {
-        // Deep work completed! Log block and start 15m rest
         onCompleteBlock(selectedProject, targetMinutes);
         setIsRestCooldown(true);
-        setSecondsRemaining(15 * 60); // 15 min rest cooldown
+        setSecondsRemaining(15 * 60);
       } else {
-        // Rest complete
         setIsRestCooldown(false);
         setSecondsRemaining(targetMinutes * 60);
       }
@@ -82,7 +80,7 @@ export const FocusTimerCard: React.FC<FocusTimerCardProps> = ({
         <View style={styles.headerLeft}>
           <View style={[styles.iconBox, { backgroundColor: isRestCooldown ? Colors.cyanMuted : Colors.primaryGlow }]}>
             <Ionicons 
-              name={isRestCooldown ? "cafe-outline" : "hourglass-outline"} 
+              name={isRestCooldown ? "cafe" : "hourglass"} 
               size={20} 
               color={isRestCooldown ? Colors.cyan : Colors.primary} 
             />
@@ -188,6 +186,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: Spacing.md,
+    ...Shadows.card,
   },
   headerRow: {
     flexDirection: 'row',
@@ -222,7 +221,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: Colors.primaryGlow,
+    backgroundColor: Colors.primaryMuted,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: BorderRadius.full,
@@ -246,14 +245,14 @@ const styles = StyleSheet.create({
   },
   projPill: {
     backgroundColor: Colors.surfaceHighlight,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   projPillSelected: {
-    backgroundColor: Colors.primaryGlow,
+    backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
   projPillText: {
@@ -262,7 +261,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   projPillTextSelected: {
-    color: Colors.primary,
+    color: '#ffffff',
     fontWeight: '800',
   },
   timerDisplayContainer: {
@@ -270,7 +269,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
   },
   timerDigits: {
-    fontSize: 48,
+    fontSize: 50,
     fontWeight: '900',
     color: Colors.textPrimary,
     letterSpacing: 2,
@@ -287,8 +286,8 @@ const styles = StyleSheet.create({
     marginVertical: Spacing.sm,
   },
   presetBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderRadius: BorderRadius.sm,
     backgroundColor: Colors.surfaceHighlight,
     borderWidth: 1,
@@ -319,6 +318,7 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
+    ...Shadows.soft,
   },
   startBtn: {
     backgroundColor: Colors.primary,
@@ -341,4 +341,3 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
-

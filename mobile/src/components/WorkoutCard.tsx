@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from '../theme/colors';
+import { Colors, Spacing, BorderRadius, Shadows } from '../theme/colors';
 import { WorkoutSession, KaizenOverloadConfig } from '../types';
 import { safeHaptics } from '../services/haptics';
 import { EXERCISE_GUIDES, ExerciseGuide } from '../services/exerciseData';
@@ -21,7 +21,6 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
   onAcceptOverload,
   onOpenGuide,
 }) => {
-  // 45-Second Rest Timer State
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
 
   useEffect(() => {
@@ -42,7 +41,6 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
     const currentVal = workout.exercises[exIndex].completedSets[setIndex];
     onToggleSet(exIndex, setIndex);
 
-    // If marking as done, kick off 45s rest timer
     if (currentVal === 0) {
       setRestSeconds(45);
     }
@@ -56,7 +54,7 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <View style={[styles.iconBox, { backgroundColor: Colors.amberMuted }]}>
-            <Ionicons name="barbell-outline" size={20} color={Colors.amber} />
+            <Ionicons name="barbell" size={20} color={Colors.amber} />
           </View>
           <View>
             <Text style={styles.cardTitle}>KAIZEN WORKOUT</Text>
@@ -102,10 +100,10 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
         </View>
       )}
 
-      {/* Active Rest Interval Countdown */}
+      {/* Active Rest Countdown */}
       {restSeconds !== null && (
         <View style={styles.restTimerBanner}>
-          <Ionicons name="timer-outline" size={16} color={Colors.cyan} />
+          <Ionicons name="timer" size={16} color={Colors.cyan} />
           <Text style={styles.restTimerText}>
             Rest Interval: <Text style={styles.timerBold}>{restSeconds}s</Text>
           </Text>
@@ -121,7 +119,6 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
       {/* Exercises List */}
       <View style={styles.exerciseList}>
         {workout.exercises.map((ex, exIndex) => {
-          // Map exercise to guide
           let guideKey = 'pushups';
           if (ex.name === 'Horse Stance') guideKey = 'horseStance';
           if (ex.name === 'Active Dead Hang') guideKey = 'activeDeadHang';
@@ -129,7 +126,6 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
 
           return (
             <View key={ex.name} style={styles.exerciseRow}>
-              {/* Exercise Title & Info Button */}
               <View style={styles.exerciseInfo}>
                 <View style={styles.titleWithGuide}>
                   <Text style={styles.exerciseName}>{ex.name}</Text>
@@ -141,8 +137,8 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
                     }}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="information-circle" size={14} color={Colors.primary} />
-                    <Text style={styles.infoText}>Form</Text>
+                    <Ionicons name="play-circle" size={13} color={Colors.primary} />
+                    <Text style={styles.infoText}>Guide</Text>
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.targetLabel}>
@@ -150,7 +146,6 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
                 </Text>
               </View>
 
-              {/* Set Check Buttons */}
               <View style={styles.setButtonGroup}>
                 {[0, 1, 2].map(setIndex => {
                   const val = ex.completedSets[setIndex];
@@ -178,52 +173,30 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
         })}
       </View>
 
-      {/* Ankle Prehab & Mobility Complementary Section */}
+      {/* Ankle Prehab Section */}
       <View style={styles.prehabContainer}>
         <View style={styles.prehabHeader}>
-          <Ionicons name="shield-outline" size={15} color={Colors.emerald} />
-          <Text style={styles.prehabTitle}>LEFT ANKLE PREHAB & RECOVERY GUIDES</Text>
+          <Ionicons name="shield-checkmark" size={15} color={Colors.emerald} />
+          <Text style={styles.prehabTitle}>LEFT ANKLE PREHAB & TENDON REPAIR</Text>
         </View>
         <View style={styles.prehabButtonsRow}>
-          <TouchableOpacity 
-            style={styles.prehabPill}
-            onPress={() => {
-              safeHaptics.light();
-              onOpenGuide(EXERCISE_GUIDES.tibialisWallRaises);
-            }}
-          >
-            <Text style={styles.prehabPillText}>Tibialis Wall Raises ℹ️</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.prehabPill}
-            onPress={() => {
-              safeHaptics.light();
-              onOpenGuide(EXERCISE_GUIDES.eccentricCalfRaises);
-            }}
-          >
-            <Text style={styles.prehabPillText}>Eccentric Calf Raises ℹ️</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.prehabPill}
-            onPress={() => {
-              safeHaptics.light();
-              onOpenGuide(EXERCISE_GUIDES.couchStretch);
-            }}
-          >
-            <Text style={styles.prehabPillText}>Couch Stretch ℹ️</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.prehabPill}
-            onPress={() => {
-              safeHaptics.light();
-              onOpenGuide(EXERCISE_GUIDES.hipFlow9090);
-            }}
-          >
-            <Text style={styles.prehabPillText}>90-90 Hip Flow ℹ️</Text>
-          </TouchableOpacity>
+          {[
+            { key: 'tibialisWallRaises', label: 'Tibialis Raises' },
+            { key: 'eccentricCalfRaises', label: 'Eccentric Calves' },
+            { key: 'couchStretch', label: 'Couch Stretch' },
+            { key: 'hipFlow9090', label: '90-90 Hip Flow' },
+          ].map(item => (
+            <TouchableOpacity 
+              key={item.key}
+              style={styles.prehabPill}
+              onPress={() => {
+                safeHaptics.light();
+                onOpenGuide(EXERCISE_GUIDES[item.key]);
+              }}
+            >
+              <Text style={styles.prehabPillText}>{item.label} ℹ️</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
     </View>
@@ -238,6 +211,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: Spacing.md,
+    ...Shadows.card,
   },
   headerRow: {
     flexDirection: 'row',
@@ -290,7 +264,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.amber + '60',
+    borderColor: Colors.amber + '40',
     marginBottom: Spacing.md,
   },
   overloadTitle: {
@@ -312,7 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
   },
   overloadBtnText: {
-    color: '#000000',
+    color: '#ffffff',
     fontSize: 11,
     fontWeight: '800',
   },
@@ -365,16 +339,16 @@ const styles = StyleSheet.create({
   },
   exerciseName: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.textPrimary,
   },
   infoBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    backgroundColor: Colors.primaryGlow,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    gap: 3,
+    backgroundColor: Colors.primaryMuted,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: BorderRadius.full,
   },
   infoText: {
@@ -392,9 +366,9 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   setButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: Colors.surfaceHighlight,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -451,4 +425,3 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
 });
-

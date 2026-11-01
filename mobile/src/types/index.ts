@@ -45,6 +45,8 @@ export interface KaizenOverloadConfig {
 export interface FullnessLog {
   meal: 'Breakfast' | 'Lunch' | 'Dinner';
   rating: number; // 1-5 (3 is optimal 80%)
+  description?: string; // Optional: what was eaten
+  trigger?: string; // Optional: if rating > 3, what triggered overeating
   timestamp: string;
 }
 
@@ -53,6 +55,8 @@ export interface HabitIntegrityState {
   waterGoalMl: number;
   fullnessLogs: FullnessLog[];
   purityStreakDays: number;
+  consecutiveControlledSatietyDays: number; // Toward 14-day intermittent fasting unlock
+  fastingModeUnlocked: boolean;
   lastPurityCheckDate: string;
   lastUrgeDefeatedTimestamp?: string;
 }
@@ -85,15 +89,30 @@ export interface FocusBlockSession {
   completed: boolean;
 }
 
+export interface HobbyLogEntry {
+  type: 'guitar' | 'photo' | 'novel' | 'writing';
+  details: string; // e.g. "Chords practiced", "Lightroom project", "Book title & pp", "Poem title"
+  timestamp: string;
+}
+
 export interface EveningSanctuaryState {
   guitarMinutesToday: number;
   photoEditingThisWeek: boolean;
   novelReadingThisWeek: boolean;
   poemStoryThisWeek: boolean;
+  hobbyLogs: HobbyLogEntry[];
   microJournalWins: string;
   microJournalFriction: string;
   tomorrowAnchor: string;
   lastSavedDate: string;
+}
+
+export interface BodyMetricLog {
+  date: string;
+  weightKg: number;
+  waistCm: number;
+  tummyCm: number;
+  ankleStrain: number; // 0-10
 }
 
 export interface SelfAppState {
@@ -108,5 +127,5 @@ export interface SelfAppState {
   waistCircumferenceCm: number;
   tummyCircumferenceCm: number;
   anklePainRating: number; // 0-10
+  bodyMetricsHistory: BodyMetricLog[];
 }
-
