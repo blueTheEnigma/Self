@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius, Shadows } from '../theme/colors';
-import { Typography } from '../theme/typography';
+import { Colors, Spacing, BorderRadius } from '../theme/colors';
 import { DayPhase } from '../types';
 import { safeHaptics } from '../services/haptics';
 
@@ -11,27 +10,28 @@ interface HeaderProps {
   dayPhase: DayPhase;
   isPreviewing?: boolean;
   onResetLive?: () => void;
-  waterMl: number;
-  waterGoalMl: number;
-  purityDays: number;
-  urgeDivertedCount: number;
-  controlledSatietyDays: number;
-  fastingUnlocked: boolean;
+  waterMl?: number;
+  waterGoalMl?: number;
+  purityDays?: number;
+  urgeDivertedCount?: number;
+  controlledSatietyDays?: number;
+  fastingUnlocked?: boolean;
   todaySpent?: number;
   onOpenSpend: () => void;
   onOpenBodyMetrics: () => void;
+  onOpenSettings?: () => void;
 }
 
 const PHASE_LABELS: Record<DayPhase, string> = {
-  MORNING_RITUAL: 'Morning Ritual',
-  DEEP_WORK_1: 'Focus 1: Code Engine',
-  MIDDAY_BUFFER: 'Midday Reset',
-  DEEP_WORK_2: 'Focus 2: Math Sprint',
-  AFTERNOON_BUFFER: 'Lunch & Life Buffer',
-  DEEP_WORK_3: 'Focus 3: Fellowships',
-  LIFE_BUFFER: 'Open Life Buffer',
-  EVENING_SANCTUARY: 'Evening Sanctuary',
-  NIGHT_REST: 'Sabbath Night Rest',
+  MORNING_RITUAL: 'Morning',
+  DEEP_WORK_1: 'Focus 1',
+  MIDDAY_BUFFER: 'Reset',
+  DEEP_WORK_2: 'Focus 2',
+  AFTERNOON_BUFFER: 'Lunch',
+  DEEP_WORK_3: 'Focus 3',
+  LIFE_BUFFER: 'Buffer',
+  EVENING_SANCTUARY: 'Sanctuary',
+  NIGHT_REST: 'Rest',
 };
 
 export const Header: React.FC<HeaderProps> = ({
@@ -39,18 +39,12 @@ export const Header: React.FC<HeaderProps> = ({
   dayPhase,
   isPreviewing = false,
   onResetLive,
-  waterMl,
-  waterGoalMl,
-  purityDays,
-  urgeDivertedCount,
-  controlledSatietyDays,
-  fastingUnlocked,
   todaySpent = 0,
   onOpenSpend,
   onOpenBodyMetrics,
+  onOpenSettings,
 }) => {
   const phaseLabel = PHASE_LABELS[dayPhase];
-  const waterPct = Math.min(Math.round((waterMl / waterGoalMl) * 100), 100);
 
   const dateObj = new Date(currentDate);
   const formattedDate = dateObj.toLocaleDateString('en-US', {
@@ -61,15 +55,15 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Top App Bar */}
+      {/* Top Airy App Bar */}
       <View style={styles.topRow}>
         <View>
           <Text style={styles.appName}>SELF</Text>
           <Text style={styles.dateText}>{formattedDate}</Text>
         </View>
 
-        <View style={styles.topRightRow}>
-          {/* Active Phase Pill (Tappable to reset to live when previewing) */}
+        <View style={styles.actionsRow}>
+          {/* Active Phase Pill */}
           <TouchableOpacity 
             style={[styles.phasePill, isPreviewing && styles.phasePillPreview]}
             onPress={isPreviewing ? onResetLive : undefined}
@@ -100,83 +94,81 @@ export const Header: React.FC<HeaderProps> = ({
               </Text>
             )}
           </TouchableOpacity>
+
+          {/* Body Metrics / Audit Icon Button */}
+          <TouchableOpacity
+            style={styles.settingsBtn}
+            onPress={() => {
+              safeHaptics.light();
+              onOpenBodyMetrics();
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="scale-outline" size={18} color={Colors.textSecondary} />
+          </TouchableOpacity>
+
+          {/* Settings / Protocols Icon Button */}
+          {onOpenSettings && (
+            <TouchableOpacity
+              style={styles.settingsBtn}
+              onPress={() => {
+                safeHaptics.light();
+                onOpenSettings();
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="settings-outline" size={17} color={Colors.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
-
-      {/* Unified Monochromatic Metric Strip (Zero Rainbow Pollution) */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipsScroll}
-      >
-        {/* Purity Chip */}
-        <View style={styles.metricChip}>
-          <Ionicons name="shield-checkmark" size={13} color={Colors.primary} />
-          <Text style={styles.metricChipText}>Day {purityDays} Clean</Text>
-        </View>
-
-        {/* Urges Diverted Chip */}
-        <View style={styles.metricChip}>
-          <Ionicons name="flash-outline" size={13} color={Colors.textSecondary} />
-          <Text style={styles.metricChipText}>{urgeDivertedCount} Diverted</Text>
-        </View>
-
-        {/* Hydration Chip */}
-        <View style={styles.metricChip}>
-          <Ionicons name="water-outline" size={13} color={Colors.textSecondary} />
-          <Text style={styles.metricChipText}>{waterMl}ml ({waterPct}%)</Text>
-        </View>
-
-        {/* Satiety Discipline Chip */}
-        <View style={styles.metricChip}>
-          <Ionicons name="restaurant-outline" size={13} color={Colors.textSecondary} />
-          <Text style={styles.metricChipText}>
-            {controlledSatietyDays}/14d {fastingUnlocked ? '• Fasting' : 'Satiety'}
-          </Text>
-        </View>
-      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: Colors.background,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
-    paddingBottom: Spacing.xs,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingBottom: Spacing.sm,
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
   },
   appName: {
-    ...Typography.title1,
-    letterSpacing: 1.5,
+    fontSize: 22,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    letterSpacing: 2,
   },
   dateText: {
-    ...Typography.caption,
-    marginTop: 1,
+    fontSize: 12,
+    fontWeight: '500',
+    color: Colors.textMuted,
+    marginTop: 2,
   },
-  topRightRow: {
+  actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: 8,
   },
   phasePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    backgroundColor: Colors.surface,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surfaceHighlight,
     borderWidth: 1,
     borderColor: Colors.border,
+    gap: 5,
+  },
+  phasePillPreview: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryMuted,
   },
   phaseDot: {
     width: 6,
@@ -184,62 +176,46 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: Colors.primary,
   },
-  phasePillText: {
-    ...Typography.micro,
-    color: Colors.textSecondary,
-    textTransform: 'none',
-  },
-  phasePillPreview: {
-    backgroundColor: Colors.primaryMuted,
-    borderColor: Colors.primary,
-  },
   phaseDotPreview: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
+  },
+  phasePillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.textPrimary,
   },
   phasePillTextPreview: {
     color: Colors.primary,
-    fontWeight: '700',
   },
   spendPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    backgroundColor: Colors.surfaceHighlight,
+    backgroundColor: Colors.surface,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
     borderColor: Colors.border,
+    gap: 3,
   },
   spendSymbol: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
     color: Colors.primary,
   },
   spendAmount: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.textPrimary,
   },
-  chipsScroll: {
-    flexDirection: 'row',
-    gap: 6,
-    paddingVertical: 6,
-  },
-  metricChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+  settingsBtn: {
+    width: 32,
+    height: 32,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surfaceHighlight,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
-  },
-  metricChipText: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: Colors.textSecondary,
   },
 });

@@ -37,7 +37,8 @@ export const QuickSpendModal: React.FC<QuickSpendProps> = ({
   const [activeTab, setActiveTab] = useState<'log' | 'history'>('log');
   const [amountStr, setAmountStr] = useState('');
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
   const todayTransactions = transactions.filter(t => t.timestamp.startsWith(todayStr));
   const todayTotal = todayTransactions.reduce((acc, t) => acc + t.amount, 0);
 
@@ -73,7 +74,7 @@ export const QuickSpendModal: React.FC<QuickSpendProps> = ({
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="fade"
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
@@ -153,6 +154,24 @@ export const QuickSpendModal: React.FC<QuickSpendProps> = ({
                     </TouchableOpacity>
                   ))}
                 </View>
+              </View>
+
+              {/* High-Velocity 1-Tap Preset Buttons */}
+              <View style={styles.presetsRow}>
+                {[500, 1000, 2000, 5000].map(val => (
+                  <TouchableOpacity
+                    key={val}
+                    style={styles.presetChip}
+                    onPress={() => {
+                      safeHaptics.light();
+                      const current = parseFloat(amountStr) || 0;
+                      setAmountStr((current + val).toString());
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.presetChipText}>+₦{val.toLocaleString()}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
 
               {/* Tactile Mobile NumPad */}
@@ -247,17 +266,20 @@ export const QuickSpendModal: React.FC<QuickSpendProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
   },
   sheetContainer: {
+    width: '100%',
     backgroundColor: Colors.surface,
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
     maxHeight: '90%',
+    ...Shadows.card,
   },
   header: {
     flexDirection: 'row',
@@ -367,6 +389,26 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: Colors.textPrimary,
+  },
+  presetsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: Spacing.sm,
+  },
+  presetChip: {
+    flex: 1,
+    backgroundColor: Colors.surfaceHighlight,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.borderFocus,
+  },
+  presetChipText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary,
   },
   numpadGrid: {
     gap: Spacing.xs,

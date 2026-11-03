@@ -6,6 +6,7 @@ export interface ExerciseGuide {
   cues: string[];
   mistakesToAvoid: string[];
   kaizenTip: string;
+  youtubeId: string;
   videoDemoUrl: string;
   animationFrames: {
     startLabel: string;
@@ -33,7 +34,8 @@ export const EXERCISE_GUIDES: Record<string, ExerciseGuide> = {
       'Half reps (skipping the bottom stretch or top lockout).'
     ],
     kaizenTip: 'Aim for a 3-1-1 tempo: 3 seconds down, 1 second pause at bottom, 1 second explosive push.',
-    videoDemoUrl: 'https://www.youtube.com/results?search_query=perfect+pushup+form+calisthenics',
+    youtubeId: 'IODxDxX7oi4',
+    videoDemoUrl: 'https://www.youtube.com/embed/IODxDxX7oi4?playsinline=1&rel=0&modestbranding=1',
     animationFrames: {
       startLabel: 'Plank Lockout',
       peakLabel: 'Chest 1" From Ground',
@@ -59,7 +61,8 @@ export const EXERCISE_GUIDES: Record<string, ExerciseGuide> = {
       'Creeping up out of depth as the burn begins.'
     ],
     kaizenTip: 'When the burn starts at 15s, relax your shoulders and focus on calm nasal exhales to condition mental endurance.',
-    videoDemoUrl: 'https://www.youtube.com/results?search_query=proper+horse+stance+form+tutorial',
+    youtubeId: '9H0f6sR_MhM',
+    videoDemoUrl: 'https://www.youtube.com/embed/9H0f6sR_MhM?playsinline=1&rel=0&modestbranding=1',
     animationFrames: {
       startLabel: 'Standing Wide',
       peakLabel: 'Thighs Parallel to Floor',
@@ -83,7 +86,8 @@ export const EXERCISE_GUIDES: Record<string, ExerciseGuide> = {
       'Holding breath instead of deep rhythmic breathing.'
     ],
     kaizenTip: 'Decompresses the spine from heavy running while building steel grip and shoulder joint resilience.',
-    videoDemoUrl: 'https://www.youtube.com/results?search_query=active+dead+hang+form+tutorial',
+    youtubeId: 'vMhaX_o0l-g',
+    videoDemoUrl: 'https://www.youtube.com/embed/vMhaX_o0l-g?playsinline=1&rel=0&modestbranding=1',
     animationFrames: {
       startLabel: 'Passive Hang',
       peakLabel: 'Scapulae Depressed & Lat Engaged',
@@ -98,119 +102,128 @@ export const EXERCISE_GUIDES: Record<string, ExerciseGuide> = {
     cues: [
       'Lie flat on back with knees bent at 90 degrees and feet flat on floor.',
       'Place fingertips lightly behind ears or cross hands over chest (never yank on neck).',
-      'Exhale and curl your spine up vertebra by vertebra, tucking chin slightly to engage abs.',
-      'At the top, touch torso near thighs without rounding violently.',
-      'Lower down smoothly over 2 full seconds; do not drop back flat.'
+      'Initiate movement by curling the ribcage down toward the pelvis, contracting abs.',
+      'Rise up smoothly until torso is upright; exhale as you reach the top.',
+      'Lower down bone by bone under full eccentric control.'
     ],
     mistakesToAvoid: [
-      'Yanking your neck with hands (cervical spine strain).',
-      'Bouncing your back off the floor using momentum.',
-      'Arching lower back on the way up.'
+      'Yanking violently on the back of the neck (cervical spine compression).',
+      'Using bouncing momentum off the floor.',
+      'Arching lower back on the way down.'
     ],
-    kaizenTip: 'Think of rolling up like a carpet rather than pivoting like a wooden board.',
-    videoDemoUrl: 'https://www.youtube.com/results?search_query=proper+controlled+sit+up+form',
+    kaizenTip: 'Treat each rep as a slow spinal peel off the carpet. 2 seconds up, 3 seconds descent.',
+    youtubeId: '1fbU_MkV7NE',
+    videoDemoUrl: 'https://www.youtube.com/embed/1fbU_MkV7NE?playsinline=1&rel=0&modestbranding=1',
     animationFrames: {
-      startLabel: 'Supine on Floor',
-      peakLabel: 'Vertebral Curl to Top',
-      tempo: '2s Concentric / 2s Controlled Negative'
+      startLabel: 'Supine Ground',
+      peakLabel: 'Full Abdominal Contraction',
+      tempo: '2s Up / 1s Peak / 3s Lowering'
     }
   },
+
+  // --- Left Ankle Tendon Rehabilitation & Prehab Guides ---
   tibialisWallRaises: {
     id: 'tibialisWallRaises',
     name: 'Tibialis Wall Raises',
     category: 'Ankle Prehab',
-    primaryMuscles: 'Tibialis Anterior (Front Shin Muscle & Ankle Decelerator)',
+    primaryMuscles: 'Tibialis Anterior (Shin Muscle), Ankle Dorsiflexors',
     cues: [
-      'Lean your back flat against a wall with buttocks and upper back touching.',
-      'Place your feet 12 to 18 inches out in front of you, legs completely straight.',
-      'Keeping heels planted firmly on ground, pull your toes and foot upward as high as humanly possible towards your shins.',
-      'Hold the peak contraction for 1 full second (feel the intense burn in front of shins).',
-      'Slowly lower feet back down until balls of feet lightly kiss the ground, then immediately pull back up.'
+      'Stand with back resting flat against a smooth wall, heels roughly 1 to 2 feet out from the wall.',
+      'Keep knees completely locked straight and butt against the wall.',
+      'Pull your toes up toward your shins as high as humanly possible (full dorsiflexion).',
+      'Hold the top peak contraction for 1 full second.',
+      'Lower your forefeet back down slowly under control until feet touch the floor.'
     ],
     mistakesToAvoid: [
-      'Bending the knees (keeps tension off the tibialis).',
-      'Bouncing feet rapidly off the ground without pausing at top.'
+      'Bending knees to cheat the range of motion.',
+      'Rushing through reps without pausing at the top peak.',
+      'Bouncing heels.'
     ],
-    kaizenTip: 'The tibialis anterior is the brake system of the lower leg. Strengthening it directly stops left ankle pain and shin splints.',
-    videoDemoUrl: 'https://www.youtube.com/results?search_query=tibialis+raises+against+wall+tutorial',
+    kaizenTip: 'The tibialis anterior is the primary decelerator of impact when your foot hits the ground during running. Building this eliminates shin splints and cushions the ankle joint.',
+    youtubeId: 'bW_Yt6P4m00',
+    videoDemoUrl: 'https://www.youtube.com/embed/bW_Yt6P4m00?playsinline=1&rel=0&modestbranding=1',
     animationFrames: {
-      startLabel: 'Heels Planted / Feet Flat',
-      peakLabel: 'Toes Pulled High to Shin (Hold 1s)',
-      tempo: '1s Up / 1s Pause / 2s Down'
+      startLabel: 'Flat Foot',
+      peakLabel: 'Max Dorsiflexion Hold',
+      tempo: '1s Up / 1s Squeeze / 2s Down'
     }
   },
   eccentricCalfRaises: {
     id: 'eccentricCalfRaises',
     name: 'Slow Eccentric Calf Raises',
     category: 'Ankle Prehab',
-    primaryMuscles: 'Gastrocnemius, Soleus, Achilles Tendon & Posterior Tibial Tendon',
+    primaryMuscles: 'Gastrocnemius, Soleus, Achilles Tendon Complex',
     cues: [
-      'Stand with balls of both feet on the edge of a step, holding a wall or railing for balance.',
-      'Rise up onto balls of both feet into full plantarflexion.',
-      'Lift the right foot off the step so only your LEFT leg carries your entire 96.5kg body weight.',
-      'Lower your left heel down below the level of the step over a strict 3-to-4-second count.',
-      'Feel the deep, restorative eccentric stretch in the Achilles and ankle arch.',
-      'Put both feet down to push back up, and repeat.'
+      'Stand on a stair ledge or sturdy step with balls of feet on edge and heels hanging off.',
+      'Rise up on both feet to full plantarflexion (top of calf raise).',
+      'Shift your weight primarily onto the left leg.',
+      'Lower your left heel below step level over a strict 4-second count.',
+      'Feel the deep, healing stretch through the Achilles and calf before pushing back up.'
     ],
     mistakesToAvoid: [
-      'Dropping down fast (the entire tendon-strengthening benefit is in the slow 3-4s lowering phase).',
-      'Letting the ankle roll outwards or inwards during the descent.'
+      'Dropping down fast (defeats the eccentric tendon-strengthening stimulus).',
+      'Rolling ankle outward onto the pinky toe (keep weight through big toe ball).',
+      'Skipping the bottom stretch.'
     ],
-    kaizenTip: 'Eccentric contractions remodel collagen fibers in tendons far faster than static stretching.',
-    videoDemoUrl: 'https://www.youtube.com/results?search_query=single+leg+eccentric+calf+raise+achilles',
+    kaizenTip: 'Eccentric loading stimulates tenocytes to lay down fresh type-I collagen fibers in strained tendons.',
+    youtubeId: 'eW57mKqZ7G8',
+    videoDemoUrl: 'https://www.youtube.com/embed/eW57mKqZ7G8?playsinline=1&rel=0&modestbranding=1',
     animationFrames: {
-      startLabel: 'Two-Foot Rise',
-      peakLabel: 'Single-Foot 4-Second Deep Drop',
-      tempo: '3-4s Controlled Negative'
+      startLabel: 'Top Calf Raise',
+      peakLabel: 'Heel Below Step Level',
+      tempo: '4-Second Eccentric Lowering'
     }
   },
   couchStretch: {
     id: 'couchStretch',
-    name: 'The Couch Stretch',
+    name: 'The Couch Stretch (Psoas & Rectus Femoris)',
     category: 'Mobility',
-    primaryMuscles: 'Psoas, Rectus Femoris, Hip Flexors',
+    primaryMuscles: 'Hip Flexors, Quadriceps (Rectus Femoris), Anterior Hip Capsule',
     cues: [
-      'Back up to a wall or couch. Place your left knee in the corner where the floor meets the wall.',
-      'Shin should be vertical against the wall, toes pointed up.',
-      'Step your right foot out in front into a deep lunge position with knee at 90 degrees.',
-      'Squeeze your left glute as hard as possible to lock the pelvis in neutral.',
-      'Slowly bring your torso upright. You will feel an intense stretch down the front of the hip and thigh.'
+      'Back your rear knee directly into the corner where wall and floor meet.',
+      'Shin should be vertical against the wall, top of foot flat against wall.',
+      'Step other foot forward into a lunge position with shin vertical.',
+      'Squeeze the glute on the wall-leg side tightly and gently lift torso upright.',
+      'Maintain a neutral pelvis—never hyperextend lumbar spine.'
     ],
     mistakesToAvoid: [
-      'Arching the lower back to fake upright posture (keep ribs down and glute squeezed).',
-      'Letting the front knee collapse inward.'
+      'Arching low back to fake an upright torso.',
+      'Letting the back knee slide away from the wall.',
+      'Failing to squeeze the glute.'
     ],
-    kaizenTip: 'Undo hours of desk sitting and release tension pulling on your lower back and knee joints.',
-    videoDemoUrl: 'https://www.youtube.com/results?search_query=couch+stretch+tutorial+kelly+starrett',
+    kaizenTip: 'Dismantles 8+ hours of desk sitting and restores pelvic alignment, which relieves knee and ankle torque.',
+    youtubeId: 'b1o61-9pB5c',
+    videoDemoUrl: 'https://www.youtube.com/embed/b1o61-9pB5c?playsinline=1&rel=0&modestbranding=1',
     animationFrames: {
-      startLabel: 'Lunge Entry',
-      peakLabel: 'Glute Squeezed & Torso Upright',
-      tempo: '2 Minutes Continuous Deep Breathing'
+      startLabel: 'Lunge Set',
+      peakLabel: 'Torso Upright & Glute Squeezed',
+      tempo: '60-Second Deep Diaphragmatic Hold'
     }
   },
   hipFlow9090: {
     id: 'hipFlow9090',
-    name: '90-90 Hip Switch & Pigeon Pose',
+    name: '90-90 Hip Mobility Flow',
     category: 'Mobility',
-    primaryMuscles: 'Gluteus Medius, Piriformis, Hip Rotators',
+    primaryMuscles: 'Internal & External Hip Rotators, Gluteus Medius, Piriformis',
     cues: [
-      'Sit on floor with front leg bent at 90 degrees in front of you, shin perpendicular to torso.',
-      'Back leg bent at 90 degrees to the side, thigh pointing directly out and shin pointing back.',
-      'Square chest towards front shin with spine tall.',
-      'Hinge forward at the hips (not rounding upper back) to load the glute.',
-      'Hold 45 seconds, then transition smoothly by rotating knees to the opposite side.'
+      'Sit on floor with lead leg bent at 90 degrees in front (shin parallel to torso).',
+      'Trail leg bent at 90 degrees out to side (shin perpendicular to torso).',
+      'Sit tall with proud chest; square ribcage toward lead shin.',
+      'Hinge forward from hips with a flat back over the lead knee; hold 30s.',
+      'Without using hands, pivot smoothly onto heels to switch legs.'
     ],
     mistakesToAvoid: [
-      'Rounding the thoracic spine instead of hinging at the hips.',
-      'Forcing knee past pain thresholds.'
+      'Rounding upper back instead of hinging from the hips.',
+      'Pushing through sharp joint pain (work in a pain-free range).',
+      'Collapsing through torso.'
     ],
-    kaizenTip: 'Directly unlocks pelvic alignment, ensuring even force distribution to both ankles when running.',
-    videoDemoUrl: 'https://www.youtube.com/results?search_query=90+90+hip+switch+tutorial',
+    kaizenTip: 'Improves rotational hip range so your left knee and ankle do not have to twist improperly when running.',
+    youtubeId: 'o-k7lZ_mHhQ',
+    videoDemoUrl: 'https://www.youtube.com/embed/o-k7lZ_mHhQ?playsinline=1&rel=0&modestbranding=1',
     animationFrames: {
-      startLabel: '90-90 Upright Sit',
-      peakLabel: 'Forward Hip Hinge over Shin',
-      tempo: '45s Hold per side'
+      startLabel: '90-90 Base',
+      peakLabel: 'Forward Hip Hinge',
+      tempo: 'Smooth Alternating Transitions'
     }
   }
 };
-
