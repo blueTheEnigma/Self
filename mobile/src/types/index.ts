@@ -15,12 +15,31 @@ export interface ExerciseTarget {
   target: number;
   completedSets: number[];
   unit: string;
+  difficultyRating?: number; // 1-5 (Easy to Max) rated per exercise
+}
+
+export interface RunLog {
+  distanceKm: number;
+  paceMinPerKm?: string; // e.g. "5:30"
+  durationMinutes?: number;
+  feelingSummary?: string; // e.g. "Ankle felt solid, breathing controlled"
+  timestamp: string;
+}
+
+export interface GymLog {
+  split: string; // e.g. "Upper Body", "Push", "Legs", "Full Body"
+  exercisesSummary: string; // Free-form: sets, reps, lifts (e.g. "Bench Press 3x10 @ 60kg, Cable Rows 4x12")
+  durationMinutes?: number;
+  feelingSummary?: string;
+  timestamp: string;
 }
 
 export interface WorkoutSession {
   date: string; // YYYY-MM-DD
-  isRunDay: boolean; // Mon/Wed/Fri
+  isRunDay: boolean; // configurable via settings
   runDistanceKm: number;
+  runLog?: RunLog;
+  gymLog?: GymLog;
   exercises: ExerciseTarget[];
   rpeRating: number; // 1-5
   notes?: string;
@@ -47,6 +66,18 @@ export interface SpiritualAnchorState {
   trackPrayerDone: boolean;
   bibleReadingDone: boolean;
   scripturePassage?: string;
+  audiobookDone?: boolean;
+  audiobookTitle?: string;
+  audiobookTakeaway?: string;
+}
+
+export interface ScholarshipOutreachRecord {
+  id: string;
+  timestamp: string;
+  professorName: string;
+  university: string;
+  researchTopic?: string;
+  notes?: string;
 }
 
 export interface FullnessLog {
@@ -103,14 +134,31 @@ export interface FocusBlockSession {
   completed: boolean;
 }
 
+export interface ActiveFocusSession {
+  startTime: number | null; // Date.now() timestamp when started (null when paused)
+  targetMinutes: number;    // e.g. 90
+  elapsedSeconds: number;   // accumulated seconds before pause
+  isActive: boolean;
+  isRestCooldown: boolean;
+  project: ProjectFocusTag;
+}
+
 export interface HobbyLogEntry {
-  type: 'guitar' | 'photo' | 'novel' | 'writing';
+  id?: string;
+  type: 'guitar' | 'reading' | 'writing' | 'photo' | 'novel' | 'other';
+  title?: string;
   details: string;
+  durationMinutes?: number;
   timestamp: string;
 }
 
 export interface EveningSanctuaryState {
   guitarMinutesToday: number;
+  guitarNotesToday?: string;
+  readingMinutesToday?: number;
+  readingNotesToday?: string;
+  writingNotesToday?: string;
+  otherActivityToday?: string;
   photoEditingThisWeek: boolean;
   novelReadingThisWeek: boolean;
   poemStoryThisWeek: boolean;
@@ -129,6 +177,50 @@ export interface BodyMetricLog {
   ankleStrain: number; // 0-10
 }
 
+export interface DailyChecklistRecord {
+  wakeupPrayerDone: boolean;
+  trackPrayerDone: boolean;
+  bibleReadingDone: boolean;
+  audiobookDone?: boolean;
+  scholarshipOutreachDone?: boolean;
+  movementSetsDone: number;
+  movementCompleted: boolean;
+  gymLogged?: boolean;
+  satietyMealsLogged: number;
+  focusMinutes: number;
+  guitarMinutes: number;
+  microJournalDone: boolean;
+  waterMl: number;
+  totalCompletedItems: number; // 0-10
+  completionScorePercent: number; // 0-100%
+}
+
+export interface DailySnapshot {
+  date: string; // YYYY-MM-DD
+  checklist: DailyChecklistRecord;
+  focusSessionsCount: number;
+  totalSpendNgn: number;
+  runLog?: RunLog;
+  gymLog?: GymLog;
+  bodyWeightKg?: number;
+  ankleStrainRating?: number;
+  tomorrowAnchor?: string;
+  notes?: string;
+}
+
+export interface AppSettings {
+  runDays: number[]; // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat (default: [1, 3, 5])
+  nonRunDayPreference: 'gym' | 'calisthenics' | 'hybrid';
+  waterGoalMl: number;
+  deepWorkGoalMinutes: number;
+  exerciseVariants?: {
+    pushupsName?: string;
+    horseStanceName?: string;
+    activeHangName?: string;
+    situpsName?: string;
+  };
+}
+
 export interface SelfAppState {
   currentDate: string;
   workout: WorkoutSession;
@@ -138,9 +230,15 @@ export interface SelfAppState {
   transactions: SpendTransaction[];
   focusBlocks: FocusBlockSession[];
   sanctuary: EveningSanctuaryState;
+  scholarshipOutreachDone?: boolean;
+  scholarshipOutreachNotes?: string;
+  scholarshipOutreachHistory?: ScholarshipOutreachRecord[];
+  settings?: AppSettings;
+  activeFocusSession?: ActiveFocusSession;
   bodyWeightKg: number;
   waistCircumferenceCm: number;
   tummyCircumferenceCm: number;
   anklePainRating: number; // 0-10
   bodyMetricsHistory: BodyMetricLog[];
+  dailyHistory: Record<string, DailySnapshot>;
 }

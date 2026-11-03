@@ -7,14 +7,22 @@ import {
   ProjectFocusTag,
   BodyMetricLog,
   HobbyLogEntry,
-  SpiritualAnchorState
+  SpiritualAnchorState,
+  DailySnapshot,
+  AppSettings,
+  GymLog,
+  ActiveFocusSession,
+  ScholarshipOutreachRecord
 } from '../types';
 
 const STORAGE_KEY = '@self_companion_state_v3';
 
 export function getTodayDateString(): string {
   const d = new Date();
-  return d.toISOString().split('T')[0];
+  const y = d.getFullYear();
+  const m = (d.getMonth() + 1).toString().padStart(2, '0');
+  const day = d.getDate().toString().padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export function getCurrentDayPhase(): DayPhase {
@@ -34,14 +42,15 @@ export function getCurrentDayPhase(): DayPhase {
   return 'NIGHT_REST';
 }
 
-export function isRunDay(date: Date = new Date()): boolean {
+export function isRunDay(date: Date = new Date(), customRunDays: number[] = [1, 3, 5]): boolean {
   const day = date.getDay();
-  return day === 1 || day === 3 || day === 5;
+  return customRunDays.includes(day);
 }
 
 export function getInitialState(): SelfAppState {
   const today = getTodayDateString();
-  const runDay = isRunDay();
+  const defaultRunDays = [1, 3, 5]; // Mon, Wed, Fri
+  const runDay = isRunDay(new Date(), defaultRunDays);
 
   return {
     currentDate: today,
@@ -94,7 +103,9 @@ export function getInitialState(): SelfAppState {
       wakeupPrayerDone: false,
       trackPrayerDone: false,
       bibleReadingDone: false,
-      scripturePassage: ''
+      scripturePassage: '',
+      audiobookDone: false,
+      audiobookTitle: ''
     },
     integrity: {
       waterMl: 500,
@@ -120,6 +131,29 @@ export function getInitialState(): SelfAppState {
       tomorrowAnchor: 'Quant Bot & Multivariable Calculus',
       lastSavedDate: today
     },
+    scholarshipOutreachDone: false,
+    scholarshipOutreachNotes: '',
+    scholarshipOutreachHistory: [],
+    settings: {
+      runDays: [1, 3, 5],
+      nonRunDayPreference: 'gym',
+      waterGoalMl: 3000,
+      deepWorkGoalMinutes: 90,
+      exerciseVariants: {
+        pushupsName: 'Pushups',
+        horseStanceName: 'Horse Stance',
+        activeHangName: 'Active Dead Hang',
+        situpsName: 'Situps',
+      },
+    },
+    activeFocusSession: {
+      startTime: null,
+      targetMinutes: 90,
+      elapsedSeconds: 0,
+      isActive: false,
+      isRestCooldown: false,
+      project: 'Quant Bot',
+    },
     bodyWeightKg: 96.5,
     waistCircumferenceCm: 90,
     tummyCircumferenceCm: 100,
@@ -132,12 +166,74 @@ export function getInitialState(): SelfAppState {
         tummyCm: 100,
         ankleStrain: 2
       }
-    ]
+    ],
+    dailyHistory: {}
   };
 }
 
 class StorageService {
   private cache: SelfAppState | null = null;
+
+  private buildSnapshot(state: SelfAppState): DailySnapshot {
+    const movementSets = state.workout.exercises.reduce(
+      (acc, e) => acc + e.completedSets.filter(s => s > 0).length, 0
+    );
+    const focusMinutes = state.focusBlocks
+      .filter(b => b.timestamp.startsWith(state.currentDate))
+      .reduce((acc, b) => acc + b.durationMinutes, 0);
+    const todaySpend = state.transactions
+      .filter(t => t.timestamp.startsWith(state.currentDate))
+      .reduce((acc, t) => acc + t.amount, 0);
+
+    const isRunDayToday = state.workout.isRunDay;
+    const isMovementComplete = isRunDayToday
+      ? (Boolean(state.workout.runLog) && (state.workout.completed || movementSets >= 12))
+      : (Boolean(state.workout.gymLog) || state.workout.completed || movementSets >= 12);
+
+    const items = [
+      Boolean(state.spiritual.wakeupPrayerDone),
+      Boolean(state.spiritual.trackPrayerDone),
+      Boolean(state.spiritual.bibleReadingDone),
+      Boolean(state.spiritual.audiobookDone),
+      Boolean(state.scholarshipOutreachDone),
+      isMovementComplete,
+      state.integrity.fullnessLogs.length >= 2,
+      focusMinutes >= 90,
+      (state.sanctuary.guitarMinutesToday || 0) >= 15,
+      Boolean(state.sanctuary.microJournalWins),
+    ];
+    const totalDone = items.filter(Boolean).length;
+    const scorePercent = Math.round((totalDone / 10) * 100);
+
+    return {
+      date: state.currentDate,
+      checklist: {
+        wakeupPrayerDone: Boolean(state.spiritual.wakeupPrayerDone),
+        trackPrayerDone: Boolean(state.spiritual.trackPrayerDone),
+        bibleReadingDone: Boolean(state.spiritual.bibleReadingDone),
+        audiobookDone: Boolean(state.spiritual.audiobookDone),
+        scholarshipOutreachDone: Boolean(state.scholarshipOutreachDone),
+        movementSetsDone: movementSets,
+        movementCompleted: isMovementComplete,
+        gymLogged: Boolean(state.workout.gymLog),
+        satietyMealsLogged: state.integrity.fullnessLogs.length,
+        focusMinutes,
+        guitarMinutes: state.sanctuary.guitarMinutesToday || 0,
+        microJournalDone: Boolean(state.sanctuary.microJournalWins),
+        waterMl: state.integrity.waterMl,
+        totalCompletedItems: totalDone,
+        completionScorePercent: scorePercent,
+      },
+      focusSessionsCount: state.focusBlocks.filter(b => b.timestamp.startsWith(state.currentDate)).length,
+      totalSpendNgn: todaySpend,
+      runLog: state.workout.runLog,
+      gymLog: state.workout.gymLog,
+      bodyWeightKg: state.bodyWeightKg,
+      ankleStrainRating: state.anklePainRating,
+      tomorrowAnchor: state.sanctuary.tomorrowAnchor,
+      notes: state.workout.notes,
+    };
+  }
 
   async loadState(): Promise<SelfAppState> {
     if (this.cache) return this.cache;
@@ -149,22 +245,52 @@ class StorageService {
         const today = getTodayDateString();
         
         if (parsed.currentDate !== today) {
+          if (!parsed.dailyHistory) {
+            parsed.dailyHistory = {};
+          }
+          // Build and persist snapshot of previous day before resetting
+          parsed.dailyHistory[parsed.currentDate] = this.buildSnapshot(parsed);
+
           parsed.currentDate = today;
           parsed.workout.date = today;
-          parsed.workout.isRunDay = isRunDay();
+          const userRunDays = parsed.settings?.runDays || [1, 3, 5];
+          parsed.workout.isRunDay = isRunDay(new Date(), userRunDays);
           parsed.workout.completed = false;
+          parsed.workout.runLog = undefined; // Reset run log for fresh day
+          parsed.workout.gymLog = undefined; // Reset gym log for fresh day
           parsed.workout.exercises.forEach(e => {
             e.completedSets = [0, 0, 0];
           });
           parsed.spiritual.wakeupPrayerDone = false;
           parsed.spiritual.trackPrayerDone = false;
           parsed.spiritual.bibleReadingDone = false;
+          if (parsed.spiritual) {
+            parsed.spiritual.audiobookDone = false;
+          }
+          parsed.scholarshipOutreachDone = false;
           parsed.integrity.waterMl = 500;
           parsed.integrity.fullnessLogs = [];
           parsed.sanctuary.guitarMinutesToday = 0;
           parsed.sanctuary.microJournalWins = '';
           parsed.sanctuary.microJournalFriction = '';
           parsed.integrity.purityStreakDays += 1;
+          parsed.activeFocusSession = {
+            startTime: null,
+            targetMinutes: parsed.settings?.deepWorkGoalMinutes || 90,
+            elapsedSeconds: 0,
+            isActive: false,
+            isRestCooldown: false,
+            project: parsed.activeFocusSession?.project || 'Quant Bot',
+          };
+        }
+
+        // Live day safeguard: If runLog exists without today's timestamp, clear it from today's live session
+        if (parsed.workout?.runLog && (!parsed.workout.runLog.timestamp || !parsed.workout.runLog.timestamp.startsWith(today))) {
+          parsed.workout.runLog = undefined;
+        }
+        // Live day safeguard for gymLog
+        if (parsed.workout?.gymLog && (!parsed.workout.gymLog.timestamp || !parsed.workout.gymLog.timestamp.startsWith(today))) {
+          parsed.workout.gymLog = undefined;
         }
 
         // Ensure backward compatibility
@@ -173,6 +299,27 @@ class StorageService {
         }
         if (!parsed.integrity.relapseHistory) {
           parsed.integrity.relapseHistory = [];
+        }
+        if (!parsed.dailyHistory) {
+          parsed.dailyHistory = {};
+        }
+        if (parsed.scholarshipOutreachDone === undefined) {
+          parsed.scholarshipOutreachDone = false;
+        }
+        if (!parsed.settings) {
+          parsed.settings = getInitialState().settings;
+        }
+        if (!parsed.activeFocusSession) {
+          parsed.activeFocusSession = getInitialState().activeFocusSession!;
+        }
+
+        // Apply custom exercise names if saved in settings
+        if (parsed.settings?.exerciseVariants) {
+          const v = parsed.settings.exerciseVariants;
+          if (v.pushupsName && parsed.workout.exercises[0]) parsed.workout.exercises[0].name = v.pushupsName;
+          if (v.horseStanceName && parsed.workout.exercises[1]) parsed.workout.exercises[1].name = v.horseStanceName;
+          if (v.activeHangName && parsed.workout.exercises[2]) parsed.workout.exercises[2].name = v.activeHangName;
+          if (v.situpsName && parsed.workout.exercises[3]) parsed.workout.exercises[3].name = v.situpsName;
         }
 
         this.cache = parsed;
@@ -198,7 +345,7 @@ class StorageService {
   }
 
   // --- Spiritual Anchor Actions ---
-  async toggleSpiritual(item: 'wakeup' | 'track' | 'bible', passage?: string): Promise<SelfAppState> {
+  async toggleSpiritual(item: 'wakeup' | 'track' | 'bible' | 'audiobook', passage?: string, takeaway?: string): Promise<SelfAppState> {
     const state = await this.loadState();
     if (item === 'wakeup') state.spiritual.wakeupPrayerDone = !state.spiritual.wakeupPrayerDone;
     if (item === 'track') state.spiritual.trackPrayerDone = !state.spiritual.trackPrayerDone;
@@ -206,11 +353,78 @@ class StorageService {
       state.spiritual.bibleReadingDone = !state.spiritual.bibleReadingDone;
       if (passage !== undefined) state.spiritual.scripturePassage = passage;
     }
+    if (item === 'audiobook') {
+      state.spiritual.audiobookDone = !state.spiritual.audiobookDone;
+      if (passage !== undefined) state.spiritual.audiobookTitle = passage;
+      if (takeaway !== undefined) state.spiritual.audiobookTakeaway = takeaway;
+    }
     await this.saveState(state);
     return state;
   }
 
-  // --- Kaizen Workout Actions ---
+  // --- Scholarship Outreach Actions (10th Covenant Pillar) ---
+  async toggleScholarshipOutreach(notes?: string): Promise<SelfAppState> {
+    const state = await this.loadState();
+    state.scholarshipOutreachDone = !state.scholarshipOutreachDone;
+    if (notes !== undefined) state.scholarshipOutreachNotes = notes;
+    await this.saveState(state);
+    return state;
+  }
+
+  async saveScholarshipOutreach(entry: {
+    professorName: string;
+    university: string;
+    researchTopic?: string;
+    notes?: string;
+  }): Promise<SelfAppState> {
+    const state = await this.loadState();
+    if (!state.scholarshipOutreachHistory) {
+      state.scholarshipOutreachHistory = [];
+    }
+    const newRecord: ScholarshipOutreachRecord = {
+      id: `outreach_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      professorName: entry.professorName.trim(),
+      university: entry.university.trim(),
+      researchTopic: entry.researchTopic?.trim(),
+      notes: entry.notes?.trim(),
+    };
+    state.scholarshipOutreachHistory.unshift(newRecord);
+    state.scholarshipOutreachDone = true;
+    state.scholarshipOutreachNotes = `${entry.professorName} • ${entry.university}${entry.researchTopic ? ` (${entry.researchTopic})` : ''}`;
+    await this.saveState(state);
+    return state;
+  }
+
+  // --- Gym Workout Recall Superpower ---
+  async getLastGymWorkout(matchingSplit?: string): Promise<GymLog | null> {
+    const state = await this.loadState();
+    // 1. Check if today already has a gymLog
+    if (state.workout?.gymLog && (!matchingSplit || state.workout.gymLog.split === matchingSplit)) {
+      return state.workout.gymLog;
+    }
+    // 2. Search daily history in reverse chronological order
+    const history = state.dailyHistory || {};
+    const sortedDates = Object.keys(history).sort().reverse();
+    for (const d of sortedDates) {
+      const snap = history[d];
+      if (snap?.gymLog) {
+        if (!matchingSplit || snap.gymLog.split === matchingSplit) {
+          return snap.gymLog;
+        }
+      }
+    }
+    // 3. If matchingSplit was provided but no split-matched log was found, fallback to any most recent gym log
+    if (matchingSplit) {
+      for (const d of sortedDates) {
+        const snap = history[d];
+        if (snap?.gymLog) return snap.gymLog;
+      }
+    }
+    return null;
+  }
+
+  // --- Kaizen Workout & Running Actions ---
   async toggleWorkoutSet(exerciseIndex: number, setIndex: number, value?: number): Promise<SelfAppState> {
     const state = await this.loadState();
     const ex = state.workout.exercises[exerciseIndex];
@@ -230,7 +444,7 @@ class StorageService {
 
       if (state.overloadConfig.consecutiveCleanSessions >= 3) {
         state.overloadConfig.pendingSuggestion = {
-          exercise: 'Pushups',
+          exercise: state.workout.exercises[0]?.name || 'Pushups',
           oldTarget: state.overloadConfig.pushupsTarget,
           newTarget: state.overloadConfig.pushupsTarget + 1,
           unit: 'reps'
@@ -239,6 +453,41 @@ class StorageService {
     }
 
     await this.saveState(state);
+    return state;
+  }
+
+  async saveRunLog(distanceKm: number, pace?: string, durationMinutes?: number, feelingSummary?: string): Promise<SelfAppState> {
+    const state = await this.loadState();
+    state.workout.runLog = {
+      distanceKm,
+      paceMinPerKm: pace,
+      durationMinutes,
+      feelingSummary,
+      timestamp: new Date().toISOString()
+    };
+    await this.saveState(state);
+    return state;
+  }
+
+  async saveGymLog(split: string, exercisesSummary: string, durationMinutes?: number, feelingSummary?: string): Promise<SelfAppState> {
+    const state = await this.loadState();
+    state.workout.gymLog = {
+      split,
+      exercisesSummary,
+      durationMinutes,
+      feelingSummary,
+      timestamp: new Date().toISOString()
+    };
+    await this.saveState(state);
+    return state;
+  }
+
+  async updateExerciseDifficulty(exerciseIndex: number, difficultyRating: number): Promise<SelfAppState> {
+    const state = await this.loadState();
+    if (state.workout.exercises[exerciseIndex]) {
+      state.workout.exercises[exerciseIndex].difficultyRating = difficultyRating;
+      await this.saveState(state);
+    }
     return state;
   }
 
@@ -254,13 +503,18 @@ class StorageService {
     const state = await this.loadState();
     const suggestion = state.overloadConfig.pendingSuggestion;
     if (suggestion) {
-      if (suggestion.exercise === 'Pushups') {
+      const ex0Name = state.workout.exercises[0]?.name || 'Pushups';
+      const ex1Name = state.workout.exercises[1]?.name || 'Horse Stance';
+      const ex2Name = state.workout.exercises[2]?.name || 'Active Dead Hang';
+      const ex3Name = state.workout.exercises[3]?.name || 'Situps';
+
+      if (suggestion.exercise === ex0Name || suggestion.exercise === 'Pushups') {
         state.overloadConfig.pushupsTarget = suggestion.newTarget;
-      } else if (suggestion.exercise === 'Horse Stance') {
+      } else if (suggestion.exercise === ex1Name || suggestion.exercise === 'Horse Stance') {
         state.overloadConfig.horseStanceSeconds = suggestion.newTarget;
-      } else if (suggestion.exercise === 'Active Dead Hang') {
+      } else if (suggestion.exercise === ex2Name || suggestion.exercise === 'Active Dead Hang') {
         state.overloadConfig.activeHangSeconds = suggestion.newTarget;
-      } else if (suggestion.exercise === 'Situps') {
+      } else if (suggestion.exercise === ex3Name || suggestion.exercise === 'Situps') {
         state.overloadConfig.situpsTarget = suggestion.newTarget;
       }
       
@@ -272,6 +526,65 @@ class StorageService {
 
       state.overloadConfig.consecutiveCleanSessions = 0;
       state.overloadConfig.pendingSuggestion = undefined;
+    }
+    await this.saveState(state);
+    return state;
+  }
+
+  // --- Settings & Protocol Customization ---
+  async updateSettings(newSettings: Partial<AppSettings>): Promise<SelfAppState> {
+    const state = await this.loadState();
+    const current = state.settings || getInitialState().settings!;
+    const updated: AppSettings = {
+      ...current,
+      ...newSettings,
+      exerciseVariants: {
+        ...current.exerciseVariants,
+        ...(newSettings.exerciseVariants || {}),
+      },
+    };
+    state.settings = updated;
+
+    if (newSettings.runDays) {
+      state.workout.isRunDay = isRunDay(new Date(), newSettings.runDays);
+    }
+    if (newSettings.waterGoalMl) {
+      state.integrity.waterGoalMl = newSettings.waterGoalMl;
+    }
+    if (newSettings.exerciseVariants) {
+      const v = newSettings.exerciseVariants;
+      if (v.pushupsName && state.workout.exercises[0]) state.workout.exercises[0].name = v.pushupsName;
+      if (v.horseStanceName && state.workout.exercises[1]) state.workout.exercises[1].name = v.horseStanceName;
+      if (v.activeHangName && state.workout.exercises[2]) state.workout.exercises[2].name = v.activeHangName;
+      if (v.situpsName && state.workout.exercises[3]) state.workout.exercises[3].name = v.situpsName;
+    }
+
+    await this.saveState(state);
+    return state;
+  }
+
+  async updateKaizenTargets(targets: {
+    pushupsTarget?: number;
+    horseStanceSeconds?: number;
+    activeHangSeconds?: number;
+    situpsTarget?: number;
+  }): Promise<SelfAppState> {
+    const state = await this.loadState();
+    if (targets.pushupsTarget !== undefined) {
+      state.overloadConfig.pushupsTarget = targets.pushupsTarget;
+      if (state.workout.exercises[0]) state.workout.exercises[0].target = targets.pushupsTarget;
+    }
+    if (targets.horseStanceSeconds !== undefined) {
+      state.overloadConfig.horseStanceSeconds = targets.horseStanceSeconds;
+      if (state.workout.exercises[1]) state.workout.exercises[1].target = targets.horseStanceSeconds;
+    }
+    if (targets.activeHangSeconds !== undefined) {
+      state.overloadConfig.activeHangSeconds = targets.activeHangSeconds;
+      if (state.workout.exercises[2]) state.workout.exercises[2].target = targets.activeHangSeconds;
+    }
+    if (targets.situpsTarget !== undefined) {
+      state.overloadConfig.situpsTarget = targets.situpsTarget;
+      if (state.workout.exercises[3]) state.workout.exercises[3].target = targets.situpsTarget;
     }
     await this.saveState(state);
     return state;
@@ -294,11 +607,11 @@ class StorageService {
     const state = await this.loadState();
     const existing = state.integrity.fullnessLogs.findIndex(f => f.meal === meal);
     const newLog = { 
-      meal, 
-      rating, 
-      description,
-      trigger,
-      timestamp: new Date().toISOString() 
+        meal, 
+        rating, 
+        description,
+        trigger,
+        timestamp: new Date().toISOString() 
     };
 
     if (existing >= 0) {
@@ -365,6 +678,17 @@ class StorageService {
   }
 
   // --- Deep Work Focus Block Actions ---
+  async updateActiveFocusSession(session: Partial<ActiveFocusSession>): Promise<SelfAppState> {
+    const state = await this.loadState();
+    const current = state.activeFocusSession || getInitialState().activeFocusSession!;
+    state.activeFocusSession = {
+      ...current,
+      ...session,
+    };
+    await this.saveState(state);
+    return state;
+  }
+
   async recordFocusBlock(project: ProjectFocusTag, durationMinutes: number): Promise<SelfAppState> {
     const state = await this.loadState();
     const newBlock = {
@@ -391,6 +715,67 @@ class StorageService {
         timestamp: new Date().toISOString()
       });
     }
+    await this.saveState(state);
+    return state;
+  }
+
+  async logGuitarPractice(mins: number = 15, notes?: string): Promise<SelfAppState> {
+    const state = await this.loadState();
+    state.sanctuary.guitarMinutesToday += mins;
+    if (notes) state.sanctuary.guitarNotesToday = notes;
+    state.sanctuary.hobbyLogs.unshift({
+      id: 'hobby-' + Date.now().toString(36),
+      type: 'guitar',
+      details: notes || `${mins}m acoustic guitar session`,
+      durationMinutes: mins,
+      timestamp: new Date().toISOString()
+    });
+    await this.saveState(state);
+    return state;
+  }
+
+  async logReadingSession(mins: number, title?: string, notes?: string): Promise<SelfAppState> {
+    const state = await this.loadState();
+    state.sanctuary.readingMinutesToday = (state.sanctuary.readingMinutesToday || 0) + mins;
+    if (notes) state.sanctuary.readingNotesToday = notes;
+    state.sanctuary.novelReadingThisWeek = true;
+    state.sanctuary.hobbyLogs.unshift({
+      id: 'hobby-' + Date.now().toString(36),
+      type: 'reading',
+      title,
+      details: notes || `Read for ${mins}m`,
+      durationMinutes: mins,
+      timestamp: new Date().toISOString()
+    });
+    await this.saveState(state);
+    return state;
+  }
+
+  async logWritingSession(notes: string, title?: string): Promise<SelfAppState> {
+    const state = await this.loadState();
+    state.sanctuary.writingNotesToday = notes;
+    state.sanctuary.poemStoryThisWeek = true;
+    state.sanctuary.hobbyLogs.unshift({
+      id: 'hobby-' + Date.now().toString(36),
+      type: 'writing',
+      title,
+      details: notes,
+      timestamp: new Date().toISOString()
+    });
+    await this.saveState(state);
+    return state;
+  }
+
+  async logOtherActivity(activity: string, notes?: string): Promise<SelfAppState> {
+    const state = await this.loadState();
+    state.sanctuary.otherActivityToday = activity;
+    state.sanctuary.hobbyLogs.unshift({
+      id: 'hobby-' + Date.now().toString(36),
+      type: 'other',
+      title: activity,
+      details: notes || activity,
+      timestamp: new Date().toISOString()
+    });
     await this.saveState(state);
     return state;
   }

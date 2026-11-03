@@ -1,47 +1,62 @@
 export const Colors = {
-  // 95% Monochromatic Neutral Canvas (Calm, Zero-Strain Light Theme)
-  background: '#f8fafc',        // Ultra-light serene slate background
-  canvasTexture: '#f1f5f9',
-  surface: '#ffffff',           // Crisp luminous white card
-  surfaceHighlight: '#f8fafc',  // Subtle row highlight
-  surfaceElevated: '#f1f5f9',   // Distinct interactive elements
+  // Clear Morning Sky Canvas (Light, Airy, Calming)
+  background: '#F0F6FF',        // Light sky blue tint — clear morning sky
+  canvasTexture: '#E8F0FC',
+  surface: '#FFFFFF',           // Crisp luminous white card surface
+  surfaceHighlight: '#F4F8FE',  // Soft cool highlight
+  surfaceElevated: '#EDF3FB',   // Elevated card & button surface
   
-  // Hairline Dividers & Borders (Subtle, never heavy)
-  border: '#e2e8f0',            // 1px clean separator
-  borderLight: '#edf2f7',
-  borderFocus: '#94a3b8',
+  // Cool Hairline Dividers & Subtle Borders
+  border: '#DEEAF6',            // Cool mist separator
+  borderLight: '#E8F0FA',
+  borderFocus: '#93B4D4',
 
-  // Radiant Nordic Teal (Primary Signature Tint - Vibrant, Modern, Clean)
-  primary: '#0d9488',           // Vibrant Modern Teal (Crisp blue-green, eliminates forest green darkness)
-  primaryMuted: '#f0fdfa',      // Soft teal mist for active pills and subtle badges
-  primaryBorder: '#ccfbf1',     // Light teal border for active highlights
-  primaryGlow: 'rgba(13, 148, 136, 0.12)',
+  // Electric Blue Accent (Matches the App Logo Caret Icon)
+  primary: '#2563EB',           // Radiant Electric Blue
+  primaryDark: '#1D4ED8',       // Deep Royal Blue
+  primaryMuted: '#EFF6FF',      // Luminous Ice Blue mist for active pills and badges
+  primaryBorder: '#BFDBFE',     // Crisp sky blue border
+  primaryGlow: 'rgba(37, 99, 235, 0.16)',
 
-  // Monochromatic Neutral Accents
-  slateDark: '#0f172a',
-  slateMedium: '#475569',
-  slateLight: '#94a3b8',
+  // Soft Pastel Card Tints (Inspired by Reference Images)
+  peach: '#FCEEE9',             // Warm blush peach card background
+  peachDark: '#C85A32',         // Peach text / icon accent
+  peachBorder: '#F7D6CB',
 
-  // Semantic Alerts (Used STRICTLY for active warnings or emergencies, never as decoration)
-  ruby: '#dc2626',              // Urge Defeater Emergency & Relapse Reset
-  rubyMuted: '#fef2f2',
+  mint: '#E8F0EA',              // Fresh mint sage card background
+  mintDark: '#3D6846',          // Mint text / icon accent
+  mintBorder: '#D0E2D4',
+
+  honey: '#FEF6E8',             // Mellow honey amber card background
+  honeyDark: '#B87A1E',         // Honey text / icon accent
+  honeyBorder: '#F9E5C1',
+
+  lavender: '#F1EFF9',          // Calm lavender card background
+  lavenderDark: '#625696',      // Lavender text / icon accent
+  lavenderBorder: '#DBD7EF',
+  violet: '#625696',            // Alias for backwards compatibility
+  violetMuted: '#F1EFF9',
+
+  // Semantic Alerts
+  ruby: '#DC2626',              // Emergency urge / relapse reset
+  rubyMuted: '#FEF2F2',
+  rubyBorder: '#FEE2E2',
   
-  amber: '#d97706',             // Sunday Sabbath Audit Due & Left Ankle Strain
-  amberMuted: '#fffbeb',
+  amber: '#D97706',             // Sabbath audit & ankle strain
+  amberMuted: '#FFFBEB',
+  amberBorder: '#FEF3C7',
 
-  // Health / Satiety (Unified with Teal)
-  emerald: '#0d9488',
-  emeraldMuted: '#f0fdfa',
+  emerald: '#10B981',           // Success / sealed tasks
+  emeraldMuted: '#ECFDF5',
 
-  // Soft Cyan for Water
-  cyan: '#0284c7',
-  cyanMuted: '#f0f9ff',
+  cyan: '#2563EB',
+  cyanMuted: '#EFF6FF',
 
-  // High-Contrast Editorial Typography (Slate on White)
-  textPrimary: '#0f172a',       // Slate 900 for razor-sharp readability
-  textSecondary: '#475569',     // Slate 600 for comfortable body reading
-  textMuted: '#94a3b8',         // Slate 400 for quiet timestamps and tags
-  textDisabled: '#cbd5e1',
+  // High-Contrast Outdoor-Ready Typography (WCAG AA Compliant)
+  textPrimary: '#0F172A',       // Deep navy charcoal (15.5:1 contrast)
+  textSecondary: '#334155',     // Dark slate (9.2:1 contrast — passes AAA)
+  textMuted: '#5E718D',         // Rich steel slate (4.8:1 contrast — passes AA in bright sunlight)
+  textDisabled: '#94A3B8',
 };
 
 export const Spacing = {
@@ -54,33 +69,33 @@ export const Spacing = {
 };
 
 export const BorderRadius = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
+  sm: 10,
+  md: 16,
+  lg: 22,
+  xl: 28,
   full: 9999,
 };
 
 export const Shadows = {
   soft: {
-    shadowColor: '#0f172a',
+    shadowColor: '#2B3B30',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowRadius: 5,
     elevation: 1,
   },
   card: {
-    shadowColor: '#0f172a',
+    shadowColor: '#2B3B30',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
     elevation: 2,
   },
   floating: {
-    shadowColor: '#0d9488',
+    shadowColor: '#1E40AF',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
     elevation: 4,
   },
 };
