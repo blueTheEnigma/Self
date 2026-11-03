@@ -5,15 +5,14 @@ import {
   ScrollView, 
   ActivityIndicator, 
   Text, 
-  TouchableOpacity,
-  ImageBackground 
+  TouchableOpacity 
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from './src/theme/colors';
 import { Typography } from './src/theme/typography';
-import { SelfAppState, DayPhase } from './src/types';
+import { SelfAppState, DayPhase, AppSettings, ActiveFocusSession } from './src/types';
 import { 
   storage, 
   getCurrentDayPhase,
@@ -22,20 +21,37 @@ import {
 import { notificationService } from './src/services/notifications';
 import { Header } from './src/components/Header';
 import { BottomNavBar, NavTabId } from './src/components/BottomNavBar';
-import { TimeBlocksBar } from './src/components/TimeBlocksBar';
-import { SpiritualAnchorCard } from './src/components/SpiritualAnchorCard';
 import { WorkoutCard } from './src/components/WorkoutCard';
-import { IntegrityCard } from './src/components/IntegrityCard';
 import { FocusTimerCard } from './src/components/FocusTimerCard';
-import { EveningSanctuaryCard } from './src/components/EveningSanctuaryCard';
 import { QuickSpendModal } from './src/components/QuickSpendModal';
 import { UrgeDefeaterModal } from './src/components/UrgeDefeaterModal';
 import { ExerciseTechniqueModal } from './src/components/ExerciseTechniqueModal';
 import { MealLoggingModal } from './src/components/MealLoggingModal';
 import { BodyMetricsModal } from './src/components/BodyMetricsModal';
 import { RelapseResetModal } from './src/components/RelapseResetModal';
+import { CovenantRing } from './src/components/CovenantRing';
+import { QuickMetricsCards } from './src/components/QuickMetricsCards';
+import { TodayChecklist, ChecklistItem } from './src/components/TodayChecklist';
+import { RunningCard } from './src/components/RunningCard';
+import { VaultPortals } from './src/components/VaultPortals';
+import { StatsDashboard } from './src/components/StatsDashboard';
+import { GymWorkoutCard } from './src/components/GymWorkoutCard';
+import { SettingsModal } from './src/components/SettingsModal';
+import { ScholarshipOutreachModal } from './src/components/ScholarshipOutreachModal';
 import { ExerciseGuide } from './src/services/exerciseData';
 import { safeHaptics } from './src/services/haptics';
+
+const PHASE_META: Record<DayPhase, { title: string; subtitle: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  MORNING_RITUAL: { title: 'Morning Ritual', subtitle: 'Prayer, Track Walk, Movement & Audiobook', icon: 'sunny' },
+  DEEP_WORK_1: { title: 'Focus 1: Code Engine', subtitle: 'Quant Bot & Paper Thoughts', icon: 'code-slash' },
+  MIDDAY_BUFFER: { title: 'Midday Reset', subtitle: '500ml Water & Eye Reset', icon: 'water' },
+  DEEP_WORK_2: { title: 'Focus 2: Math Sprint', subtitle: 'MIT OCW Multivariable Calc', icon: 'calculator' },
+  AFTERNOON_BUFFER: { title: 'Lunch & Life Buffer', subtitle: '80% Fullness Hara Hachi Bu', icon: 'restaurant' },
+  DEEP_WORK_3: { title: 'Focus 3: Fellowships', subtitle: 'Fellowships & Tech Paper', icon: 'rocket' },
+  LIFE_BUFFER: { title: 'Open Life Buffer', subtitle: 'Guilt-Free Life, Family & Errands', icon: 'leaf' },
+  EVENING_SANCTUARY: { title: 'Evening Sanctuary', subtitle: 'Acoustic Guitar 15m & Art', icon: 'musical-notes' },
+  NIGHT_REST: { title: 'Sabbath Night Rest', subtitle: 'Sleep 8h & Neuroplastic Repair', icon: 'moon' },
+};
 
 interface RhythmBlock {
   id: DayPhase;
@@ -66,13 +82,14 @@ export default function App() {
 
   // 5 Dedicated Bottom Tabs (Vault & Stats Separated)
   const [activeNavTab, setActiveNavTab] = useState<NavTabId>('today');
-  const [statsViewMode, setStatsViewMode] = useState<'daily' | 'weekly'>('daily');
 
   // Modals state
   const [showSpendModal, setShowSpendModal] = useState(false);
   const [showUrgeModal, setShowUrgeModal] = useState(false);
   const [showBodyModal, setShowBodyModal] = useState(false);
   const [showRelapseModal, setShowRelapseModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showScholarshipModal, setShowScholarshipModal] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState<ExerciseGuide | null>(null);
   const [activeMealModal, setActiveMealModal] = useState<{
     meal: 'Breakfast' | 'Lunch' | 'Dinner';
@@ -107,8 +124,32 @@ export default function App() {
   }
 
   // --- Handlers ---
-  const handleToggleSpiritual = async (item: 'wakeup' | 'track' | 'bible', passage?: string) => {
-    const updated = await storage.toggleSpiritual(item, passage);
+  const handleToggleSpiritual = async (item: 'wakeup' | 'track' | 'bible' | 'audiobook', passage?: string, takeaway?: string) => {
+    const updated = await storage.toggleSpiritual(item, passage, takeaway);
+    setAppState({ ...updated });
+  };
+
+  const handleToggleScholarshipOutreach = async (notes?: string) => {
+    if (appState.scholarshipOutreachDone) {
+      const updated = await storage.toggleScholarshipOutreach(notes);
+      setAppState({ ...updated });
+    } else {
+      setShowScholarshipModal(true);
+    }
+  };
+
+  const handleSaveScholarshipOutreach = async (
+    professorName: string,
+    university: string,
+    researchTopic?: string,
+    notes?: string
+  ) => {
+    const updated = await storage.saveScholarshipOutreach({
+      professorName,
+      university,
+      researchTopic,
+      notes,
+    });
     setAppState({ ...updated });
   };
 
@@ -158,6 +199,11 @@ export default function App() {
     setAppState({ ...updated });
   };
 
+  const handleUpdateFocusSession = async (session: Partial<ActiveFocusSession>) => {
+    const updated = await storage.updateActiveFocusSession(session);
+    setAppState({ ...updated });
+  };
+
   const handleAddGuitar = async (mins: number, details?: string) => {
     const updated = await storage.addGuitarMinutes(mins, details);
     setAppState({ ...updated });
@@ -183,19 +229,196 @@ export default function App() {
     setAppState({ ...updated });
   };
 
+  const handleUpdateExerciseDifficulty = async (exIndex: number, diff: number) => {
+    const updated = await storage.updateExerciseDifficulty(exIndex, diff);
+    setAppState({ ...updated });
+  };
+
+  const handleSaveRun = async (dist: number, pace?: string, duration?: number, feeling?: string) => {
+    const updated = await storage.saveRunLog(dist, pace, duration, feeling);
+    setAppState({ ...updated });
+  };
+
+  const handleLogGuitar = async (mins: number, notes?: string) => {
+    const updated = await storage.logGuitarPractice(mins, notes);
+    setAppState({ ...updated });
+  };
+
+  const handleLogReading = async (mins: number, title?: string, notes?: string) => {
+    const updated = await storage.logReadingSession(mins, title, notes);
+    setAppState({ ...updated });
+  };
+
+  const handleLogWriting = async (notes: string, title?: string) => {
+    const updated = await storage.logWritingSession(notes, title);
+    setAppState({ ...updated });
+  };
+
+  const handleLogOtherActivity = async (activity: string, notes?: string) => {
+    const updated = await storage.logOtherActivity(activity, notes);
+    setAppState({ ...updated });
+  };
+
+  const handleSaveGymLog = async (split: string, exercisesSummary: string, durationMinutes?: number, feelingSummary?: string) => {
+    const updated = await storage.saveGymLog(split, exercisesSummary, durationMinutes, feelingSummary);
+    setAppState({ ...updated });
+  };
+
+  const handleSaveSettings = async (newSettings: Partial<AppSettings>) => {
+    const updated = await storage.updateSettings(newSettings);
+    setAppState({ ...updated });
+  };
+
+  const handleSaveKaizenTargets = async (targets: {
+    pushupsTarget?: number;
+    horseStanceSeconds?: number;
+    activeHangSeconds?: number;
+    situpsTarget?: number;
+  }) => {
+    const updated = await storage.updateKaizenTargets(targets);
+    setAppState({ ...updated });
+  };
+
   // Sunday & Expense calculations
   const isSunday = new Date().getDay() === 0;
   const hasLoggedMetricsToday = appState.bodyMetricsHistory.some(m => m.date === appState.currentDate);
   const todayStr = appState.currentDate;
   const todayTransactions = appState.transactions.filter(t => t.timestamp.startsWith(todayStr));
   const todaySpent = todayTransactions.reduce((acc, t) => acc + t.amount, 0);
-  const isRunningDay = isRunDay();
+  const isRunningDay = isRunDay(new Date(), appState.settings?.runDays || [1, 3, 5]);
 
   // Executive Daily & Weekly Calculations
   const totalFocusMinutesToday = appState.focusBlocks.reduce((acc, b) => acc + b.durationMinutes, 0);
   const setsDoneCount = appState.workout.exercises.reduce((acc, ex) => acc + ex.completedSets.filter(s => s > 0).length, 0);
   const totalSetsTarget = appState.workout.exercises.length * 3;
   const waterPercent = Math.min(Math.round((appState.integrity.waterMl / appState.integrity.waterGoalMl) * 100), 100);
+
+  // Movement Covenant Evaluation:
+  // On Run Days: Run logged AND Calisthenics (12 sets or completed) sealed
+  // On Non-Run Days: Gym logged OR Calisthenics (12 sets or completed) sealed
+  const isRunLogged = Boolean(appState.workout.runLog);
+  const isGymLogged = Boolean(appState.workout.gymLog);
+  const isCalisthenicsDone = setsDoneCount >= 12 || appState.workout.completed;
+  const isMovementCovenantDone = isRunningDay
+    ? (isRunLogged && isCalisthenicsDone)
+    : (isGymLogged || isCalisthenicsDone);
+
+  const lastGymLog = (() => {
+    const history = appState.dailyHistory || {};
+    const sortedDates = Object.keys(history).sort().reverse();
+    for (const d of sortedDates) {
+      if (history[d]?.gymLog) return history[d].gymLog;
+    }
+    return null;
+  })();
+
+  // Today's Checklist & Covenant Calculations
+  const todayChecklistItems: ChecklistItem[] = [
+    {
+      id: 'wakeup',
+      title: 'Morning Prayer & Dedication',
+      subtitle: appState.spiritual.wakeupPrayerDone ? 'Completed at 05:30 • Grounded' : 'Morning waking dedication',
+      domain: 'spirit_intellect',
+      category: 'spiritual',
+      isCompleted: appState.spiritual.wakeupPrayerDone,
+      onToggle: () => handleToggleSpiritual('wakeup'),
+    },
+    {
+      id: 'track_prayer',
+      title: '15m Track Walking Prayer',
+      subtitle: appState.spiritual.trackPrayerDone ? '15m completed round tracks' : 'Walking prayer round tracks',
+      domain: 'spirit_intellect',
+      category: 'spiritual',
+      isCompleted: appState.spiritual.trackPrayerDone,
+      onToggle: () => handleToggleSpiritual('track'),
+    },
+    {
+      id: 'bible',
+      title: 'Scripture Reading',
+      subtitle: appState.spiritual.bibleReadingDone ? 'Completed • Spiritual nourishment' : 'Proverbs / Daily passage',
+      domain: 'spirit_intellect',
+      category: 'spiritual',
+      isCompleted: appState.spiritual.bibleReadingDone,
+      onToggle: () => handleToggleSpiritual('bible'),
+    },
+    {
+      id: 'audiobook',
+      title: 'Daily Audiobook Summary',
+      subtitle: appState.spiritual.audiobookDone ? 'Completed • Strategic & intellectual fuel' : 'Listen to at least 1 book summary (15m)',
+      domain: 'spirit_intellect',
+      category: 'mind',
+      isCompleted: Boolean(appState.spiritual.audiobookDone),
+      onToggle: () => handleToggleSpiritual('audiobook'),
+    },
+    {
+      id: 'scholarship_outreach',
+      title: '1 Scholarship Cold Email',
+      subtitle: appState.scholarshipOutreachDone
+        ? 'Completed • Professor contacted for Masters/PhD'
+        : 'Send 1 cold email to professor (Masters/PhD)',
+      domain: 'spirit_intellect',
+      category: 'outreach',
+      isCompleted: Boolean(appState.scholarshipOutreachDone),
+      onToggle: () => handleToggleScholarshipOutreach(),
+    },
+    {
+      id: 'movement',
+      title: isRunningDay 
+        ? '2.5km Run & Calisthenics' 
+        : (appState.settings?.nonRunDayPreference === 'gym' ? 'Gym Strength Session' : 'Gym Strength or Calisthenics'),
+      subtitle: isMovementCovenantDone
+        ? (isRunningDay
+            ? (isGymLogged ? 'Conquered • 2.5km Run + Calisthenics + Gym' : 'Conquered • 2.5km Run & 12 Sets sealed')
+            : (isGymLogged ? `Conquered • ${appState.workout.gymLog?.split || 'Gym'} (${appState.workout.gymLog?.durationMinutes || 45}m)` : 'Conquered • 12/12 Calisthenics Sets sealed'))
+        : (isRunningDay
+            ? (isRunLogged ? 'Run logged • 12 Calisthenics sets remaining' : '2.5km Run & 12 Calisthenics sets')
+            : 'Log Gym session or complete 12 Calisthenics sets'),
+      domain: 'physical_sovereignty',
+      category: 'movement',
+      isCompleted: isMovementCovenantDone,
+      onToggle: () => setActiveNavTab('movement'),
+    },
+    {
+      id: 'satiety',
+      title: 'Mindful Satiety (Hara Hachi Bu)',
+      subtitle: appState.integrity.fullnessLogs.length > 0 ? `${appState.integrity.fullnessLogs.length} meal(s) audited` : 'Stop at 80% fullness',
+      domain: 'physical_sovereignty',
+      category: 'nutrition',
+      isCompleted: appState.integrity.fullnessLogs.length >= 2,
+      onToggle: () => setActiveMealModal({ meal: 'Lunch', rating: 3 }),
+    },
+    {
+      id: 'focus',
+      title: '90m Deep Work Session',
+      subtitle: totalFocusMinutesToday > 0 ? `${totalFocusMinutesToday} mins recorded` : 'Quant Bot / Multivariable Calc',
+      domain: 'craft_sanctuary',
+      category: 'focus',
+      isCompleted: totalFocusMinutesToday >= 90,
+      onToggle: () => setActiveNavTab('focus'),
+    },
+    {
+      id: 'guitar',
+      title: '15m Acoustic Guitar Anchor',
+      subtitle: appState.sanctuary.guitarMinutesToday >= 15 ? `${appState.sanctuary.guitarMinutesToday}m logged • Decompressed` : 'Non-screen tactile acoustic play',
+      domain: 'craft_sanctuary',
+      category: 'creative',
+      isCompleted: appState.sanctuary.guitarMinutesToday >= 15,
+      onToggle: () => handleLogGuitar(15),
+    },
+    {
+      id: 'journal',
+      title: 'Evening Micro-Reflection',
+      subtitle: appState.sanctuary.microJournalWins ? 'Wins & friction sealed' : '60s wins, friction & tomorrow anchor',
+      domain: 'craft_sanctuary',
+      category: 'spiritual',
+      isCompleted: Boolean(appState.sanctuary.microJournalWins),
+      onToggle: () => setActiveNavTab('today'),
+    },
+  ];
+
+  const completedCovenantCount = todayChecklistItems.filter(i => i.isCompleted).length;
+  const totalCovenantCount = todayChecklistItems.length;
+  const todayCovenantPercent = Math.round((completedCovenantCount / totalCovenantCount) * 100);
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const weeklyTransactions = appState.transactions.filter(t => new Date(t.timestamp) >= sevenDaysAgo);
@@ -207,19 +430,15 @@ export default function App() {
   const weightDelta = prevMetric ? (appState.bodyWeightKg - prevMetric.weightKg).toFixed(1) : null;
   const waistDelta = prevMetric ? (appState.waistCircumferenceCm - prevMetric.waistCm).toFixed(1) : null;
   const tummyDelta = prevMetric ? (appState.tummyCircumferenceCm - prevMetric.tummyCm).toFixed(1) : null;
+  const currentPhaseMeta = PHASE_META[activePhase] || PHASE_META.MORNING_RITUAL;
 
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
         <ExpoStatusBar style="dark" />
 
-        <ImageBackground
-          source={require('./assets/texture.jpg')}
-          style={styles.canvasBackground}
-          imageStyle={styles.textureOverlay}
-          resizeMode="repeat"
-        >
-          {/* Top Clean Monochromatic Header */}
+        <View style={styles.canvasBackground}>
+          {/* Top Airy Header */}
           <Header
             currentDate={appState.currentDate}
             dayPhase={activePhase}
@@ -234,6 +453,7 @@ export default function App() {
             todaySpent={todaySpent}
             onOpenSpend={() => setShowSpendModal(true)}
             onOpenBodyMetrics={() => setShowBodyModal(true)}
+            onOpenSettings={() => setShowSettingsModal(true)}
           />
 
           <ScrollView 
@@ -242,7 +462,7 @@ export default function App() {
             showsVerticalScrollIndicator={false}
           >
             {/* ======================================================== */}
-            {/* TAB 1: TODAY (PROPORTIONED, NO SLIM BOX, NO RAINBOW)     */}
+            {/* TAB 1: TODAY (AIRY, COVENANT RING & CHECKLIST)           */}
             {/* ======================================================== */}
             {activeNavTab === 'today' && (
               <View style={styles.screenContainer}>
@@ -288,326 +508,51 @@ export default function App() {
                   </TouchableOpacity>
                 )}
 
-                {/* 24-HOUR RHYTHM STRIP (INTERACTIVE & VISIBLE DAY TRANSITION) */}
-                <View style={styles.rhythmSection}>
-                  <View style={styles.rhythmHeaderRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Ionicons name="time-outline" size={13} color={Colors.primary} />
-                      <Text style={styles.rhythmSectionTitle}>24-HOUR RHYTHM</Text>
-                      {previewPhase ? (
-                        <View style={styles.previewActiveBadge}>
-                          <Text style={styles.previewActiveBadgeText}>Previewing</Text>
-                        </View>
-                      ) : (
-                        <View style={styles.liveClockBadge}>
-                          <View style={styles.livePulseDot} />
-                          <Text style={styles.liveClockBadgeText}>Live Clock</Text>
-                        </View>
-                      )}
-                    </View>
+                {/* HERO COVENANT & CURRENT FOCUS RING (ENLARGED 240PX HUB) */}
+                <CovenantRing
+                  currentPhaseTitle={currentPhaseMeta.title}
+                  currentPhaseSubtitle={currentPhaseMeta.subtitle}
+                  currentPhaseIcon={currentPhaseMeta.icon}
+                  purityStreakDays={appState.integrity.purityStreakDays}
+                  completionPercent={todayCovenantPercent}
+                  completedCount={completedCovenantCount}
+                  totalCount={totalCovenantCount}
+                  onPressStreak={() => setActiveNavTab('vault')}
+                  onPressAction={() => {
+                    if (activePhase.startsWith('DEEP_WORK')) setActiveNavTab('focus');
+                    else if (activePhase === 'MORNING_RITUAL') setActiveNavTab('movement');
+                    else if (activePhase === 'EVENING_SANCTUARY') setActiveNavTab('vault');
+                  }}
+                />
 
-                    {previewPhase && (
-                      <TouchableOpacity 
-                        style={styles.returnToLiveButton}
-                        onPress={() => {
-                          safeHaptics.light();
-                          setPreviewPhase(null);
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="refresh-outline" size={12} color={Colors.primary} />
-                        <Text style={styles.returnToLiveText}>Return to Live</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                {/* 3 QUICK METRIC CARDS (PEACH / MINT / HONEY) */}
+                <QuickMetricsCards
+                  waterMl={appState.integrity.waterMl}
+                  waterGoalMl={appState.integrity.waterGoalMl}
+                  onAddWater={handleAddWater}
+                  movementSetsDone={setsDoneCount}
+                  movementTotalSets={totalSetsTarget}
+                  isMovementDone={isMovementCovenantDone}
+                  movementLabel={
+                    isGymLogged 
+                      ? `${appState.workout.gymLog?.split || 'Gym'} (${appState.workout.gymLog?.durationMinutes || 45}m)`
+                      : (isRunningDay
+                          ? (isRunLogged ? `2.5km Run • ${setsDoneCount}/12` : `${setsDoneCount}/12 sets`)
+                          : `${setsDoneCount}/12 sets`)
+                  }
+                  movementSubtitle={
+                    isMovementCovenantDone
+                      ? 'Conquered ✓'
+                      : (isRunningDay ? 'Run & Sets ➔' : (appState.settings?.nonRunDayPreference === 'gym' ? 'Gym Focus ➔' : 'Movement ➔'))
+                  }
+                  onOpenMovement={() => setActiveNavTab('movement')}
+                  focusMinutesToday={totalFocusMinutesToday}
+                  focusGoalMinutes={appState.settings?.deepWorkGoalMinutes || 90}
+                  onOpenFocus={() => setActiveNavTab('focus')}
+                />
 
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.rhythmScrollContent}
-                  >
-                    {RHYTHM_BLOCKS.map(block => {
-                      const isLive = dayPhase === block.id;
-                      const isSelected = activePhase === block.id;
-                      return (
-                        <TouchableOpacity
-                          key={block.id}
-                          style={[
-                            styles.rhythmPill,
-                            isSelected && styles.rhythmPillSelected,
-                            isLive && !isSelected && styles.rhythmPillLiveBorder,
-                          ]}
-                          onPress={() => {
-                            safeHaptics.light();
-                            setPreviewPhase(block.id === dayPhase ? null : block.id);
-                          }}
-                          activeOpacity={0.75}
-                        >
-                          <View style={styles.rhythmPillTop}>
-                            <Ionicons 
-                              name={block.icon} 
-                              size={12} 
-                              color={isSelected ? Colors.primary : Colors.textMuted} 
-                            />
-                            <Text style={[
-                              styles.rhythmPillTime,
-                              isSelected && styles.rhythmPillTimeSelected
-                            ]}>
-                              {block.time}
-                            </Text>
-                            {isLive && <View style={styles.liveSmallDot} />}
-                          </View>
-                          <Text style={[
-                            styles.rhythmPillName,
-                            isSelected && styles.rhythmPillNameSelected
-                          ]}>
-                            {block.name}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
-
-                {/* CURRENT FOCUS HERO CARD (COMFORTABLE FULL WIDTH) */}
-                <View style={styles.heroWrapper}>
-                  <View style={styles.heroHeaderRow}>
-                    <Text style={styles.sectionHeaderLabel}>CURRENT FOCUS</Text>
-                    {previewPhase && (
-                      <TouchableOpacity 
-                        onPress={() => {
-                          safeHaptics.light();
-                          setPreviewPhase(null);
-                        }}
-                      >
-                        <Text style={styles.previewSubhint}>• Preview active (Tap to return)</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  {/* 1. Morning Ritual Active Phase */}
-                  {activePhase === 'MORNING_RITUAL' && (
-                    <View>
-                      <SpiritualAnchorCard
-                        spiritual={appState.spiritual}
-                        onToggle={handleToggleSpiritual}
-                      />
-
-                      {/* Movement Hub Transition Prompt */}
-                      <TouchableOpacity 
-                        style={styles.movementPromptCard}
-                        onPress={() => {
-                          safeHaptics.light();
-                          setActiveNavTab('movement');
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                          <View style={styles.promptIconCircle}>
-                            <Ionicons name="barbell-outline" size={20} color={Colors.primary} />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.promptCardTitle}>
-                              {isRunningDay ? '2.5km Run & Calisthenics' : 'Active Recovery & Ankle Prehab'}
-                            </Text>
-                            <Text style={styles.promptCardDesc}>
-                              Open Movement Hub to log sets, rest timer & form guides ➔
-                            </Text>
-                          </View>
-                        </View>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-
-                  {/* 2. Deep Work Active Phase */}
-                  {(activePhase === 'DEEP_WORK_1' || activePhase === 'DEEP_WORK_2' || activePhase === 'DEEP_WORK_3') && (
-                    <FocusTimerCard
-                      onCompleteBlock={handleCompleteFocusBlock}
-                    />
-                  )}
-
-                  {/* 3. Midday / Afternoon Buffer & Satiety Expansive Hero */}
-                  {(activePhase === 'MIDDAY_BUFFER' || activePhase === 'AFTERNOON_BUFFER') && (
-                    <View style={styles.satietyExpansiveCard}>
-                      {/* Top Header */}
-                      <View style={styles.cardHeaderRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <View style={styles.satietyIconPill}>
-                            <Ionicons name="restaurant-outline" size={18} color={Colors.primary} />
-                          </View>
-                          <View>
-                            <Text style={styles.contentCardTitle}>Mindful Satiety & Temperance</Text>
-                            <Text style={styles.cardSubhead}>80% Fullness Gauge (Hara Hachi Bu)</Text>
-                          </View>
-                        </View>
-                        <View style={styles.goldenZonePill}>
-                          <Text style={styles.goldenZoneText}>Zone: Level 3</Text>
-                        </View>
-                      </View>
-
-                      {/* 1–5 Visual Fullness Spectrum */}
-                      <View style={styles.spectrumContainer}>
-                        <Text style={styles.subCardHeader}>HOW FULL DO YOU FEEL RIGHT NOW?</Text>
-                        <View style={styles.spectrumRow}>
-                          {[
-                            { level: 1, label: 'Empty' },
-                            { level: 2, label: 'Light' },
-                            { level: 3, label: '80% Full', golden: true },
-                            { level: 4, label: 'Stuffed' },
-                            { level: 5, label: 'Overfull' },
-                          ].map(item => (
-                            <TouchableOpacity
-                              key={item.level}
-                              style={[
-                                styles.spectrumItem,
-                                item.golden && styles.spectrumItemGolden,
-                              ]}
-                              onPress={() => {
-                                safeHaptics.light();
-                                setActiveMealModal({
-                                  meal: activePhase === 'MIDDAY_BUFFER' ? 'Breakfast' : (activePhase === 'AFTERNOON_BUFFER' ? 'Lunch' : 'Dinner'),
-                                  rating: item.level,
-                                });
-                              }}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={[
-                                styles.spectrumNumber,
-                                item.golden && styles.spectrumNumberGolden,
-                              ]}>
-                                {item.level}
-                              </Text>
-                              <Text style={[
-                                styles.spectrumLabel,
-                                item.golden && styles.spectrumLabelGolden,
-                              ]}>
-                                {item.label}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      </View>
-
-                      {/* Today's Meals Audit Matrix */}
-                      <View style={styles.mealsMatrixContainer}>
-                        <Text style={styles.subCardHeader}>TODAY'S MEAL AUDIT</Text>
-                        <View style={styles.mealsList}>
-                          {(['Breakfast', 'Lunch', 'Dinner'] as const).map(meal => {
-                            const log = appState.integrity.fullnessLogs.find(l => l.meal === meal);
-                            return (
-                              <TouchableOpacity
-                                key={meal}
-                                style={styles.mealAuditRow}
-                                onPress={() => {
-                                  safeHaptics.light();
-                                  setActiveMealModal({
-                                    meal,
-                                    rating: log ? log.rating : 3,
-                                  });
-                                }}
-                                activeOpacity={0.7}
-                              >
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                  <Ionicons 
-                                    name={log ? "checkmark-circle" : "ellipse-outline"} 
-                                    size={16} 
-                                    color={log ? (log.rating <= 3 ? Colors.primary : Colors.ruby) : Colors.textMuted} 
-                                  />
-                                  <Text style={styles.mealRowName}>{meal}</Text>
-                                  {log?.description ? (
-                                    <Text style={styles.mealRowDesc} numberOfLines={1}>
-                                      • {log.description}
-                                    </Text>
-                                  ) : null}
-                                </View>
-
-                                {log ? (
-                                  <View style={[
-                                    styles.loggedRatingPill,
-                                    log.rating <= 3 ? styles.loggedRatingTeal : styles.loggedRatingRuby
-                                  ]}>
-                                    <Text style={[
-                                      styles.loggedRatingText,
-                                      log.rating <= 3 ? styles.loggedTextTeal : styles.loggedTextRuby
-                                    ]}>
-                                      Level {log.rating} {log.rating === 3 ? '✓ 80%' : (log.rating < 3 ? 'Light' : 'Over')}
-                                    </Text>
-                                  </View>
-                                ) : (
-                                  <Text style={styles.unloggedActionText}>+ Rate Meal</Text>
-                                )}
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
-                      </View>
-
-                      {/* Fasting Unlock Progress Bar */}
-                      <View style={styles.fastingProgressBox}>
-                        <View style={styles.fastingHeader}>
-                          <Text style={styles.fastingTitle}>
-                            {appState.integrity.fastingModeUnlocked 
-                              ? '🎉 INTERMITTENT FASTING UNLOCKED' 
-                              : 'INTERMITTENT FASTING MILESTONE'}
-                          </Text>
-                          <Text style={styles.fastingCount}>
-                            {appState.integrity.consecutiveControlledSatietyDays} / 14 Days
-                          </Text>
-                        </View>
-                        <View style={styles.fastingProgressBar}>
-                          <View 
-                            style={[
-                              styles.fastingProgressFill, 
-                              { width: `${Math.min((appState.integrity.consecutiveControlledSatietyDays / 14) * 100, 100)}%` }
-                            ]} 
-                          />
-                        </View>
-                        <Text style={styles.fastingHint}>
-                          Maintain satiety at Level 3 (80% Full) or below for 14 consecutive days to unlock Intermittent Fasting mode.
-                        </Text>
-                      </View>
-
-                      {/* Mindful Eating Neuroscience Cue */}
-                      <View style={styles.neuroscienceTipBox}>
-                        <Ionicons name="bulb-outline" size={15} color={Colors.primary} />
-                        <Text style={styles.neuroscienceTipText}>
-                          <Text style={{ fontWeight: '600' }}>20-Minute Leptin Lag:</Text> Your brain requires 20 minutes from the first bite to register fullness. Put the fork down between bites, hydrate, and stop before stuffed.
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-
-                  {/* 4. Evening Sanctuary */}
-                  {activePhase === 'EVENING_SANCTUARY' && (
-                    <EveningSanctuaryCard
-                      sanctuary={appState.sanctuary}
-                      onAddGuitarMinutes={handleAddGuitar}
-                      onLogHobby={handleLogHobby}
-                      onSaveJournal={handleSaveJournal}
-                    />
-                  )}
-
-                  {/* 5. Night Rest / Life Buffer */}
-                  {(activePhase === 'NIGHT_REST' || activePhase === 'LIFE_BUFFER') && (
-                    <View style={styles.contentCard}>
-                      <View style={{ alignItems: 'center', paddingVertical: Spacing.md }}>
-                        <Ionicons name="moon-outline" size={28} color={Colors.primary} />
-                        <Text style={[styles.contentCardTitle, { marginTop: Spacing.sm }]}>
-                          {activePhase === 'NIGHT_REST' ? 'Sabbath Night Rest' : 'Guilt-Free Life Buffer'}
-                        </Text>
-                        <Text style={[styles.cardDescriptionText, { textAlign: 'center', marginTop: Spacing.xs }]}>
-                          {activePhase === 'NIGHT_REST'
-                            ? '7 hours of deep restorative sleep enables neuroplastic consolidation and tendon repair for your left ankle.'
-                            : 'Open life buffer for errands, reflection, and quiet reading without guilt.'}
-                        </Text>
-                        <View style={styles.quietAnchorBox}>
-                          <Text style={styles.quietAnchorLabel}>TOMORROW'S ANCHOR</Text>
-                          <Text style={styles.quietAnchorValue}>{appState.sanctuary.tomorrowAnchor}</Text>
-                        </View>
-                      </View>
-                    </View>
-                  )}
-                </View>
+                {/* TODAY'S CHECKLIST (IMAGE 3 INSPIRED) */}
+                <TodayChecklist items={todayChecklistItems} />
 
                 {/* UNIFIED TACTILE QUICK ACTION DOCK */}
                 <View style={styles.dockWrapper}>
@@ -666,23 +611,72 @@ export default function App() {
                   <View>
                     <Text style={styles.tabBannerTitle}>KAIZEN MOVEMENT</Text>
                     <Text style={styles.tabBannerSubtitle}>
-                      {isRunningDay ? 'Run Day: 2.5km + Home Calisthenics' : 'Recovery Day: Ankle Prehab & Stretches'}
+                      {isRunningDay 
+                        ? 'Run Day: 2.5km Aerobic Base + Calisthenics' 
+                        : (appState.settings?.nonRunDayPreference === 'gym' 
+                            ? 'Gym Day: Strength Training & Muscle Progression' 
+                            : 'Non-Run Day: Gym or Calisthenics & Ankle Prehab')}
                     </Text>
                   </View>
                   <View style={styles.statusChip}>
-                    <Text style={styles.statusChipText}>Ankle Strain: {appState.anklePainRating}/5</Text>
+                    <Text style={styles.statusChipText}>Ankle Strain: {appState.anklePainRating}/10</Text>
                   </View>
                 </View>
 
-                {/* Workout Card */}
-                <WorkoutCard
-                  workout={appState.workout}
-                  overloadConfig={appState.overloadConfig}
-                  onToggleSet={handleToggleSet}
-                  onAcceptOverload={handleAcceptOverload}
-                  onOpenGuide={(guide) => setSelectedGuide(guide)}
-                  onUpdateRpe={handleUpdateWorkoutRpe}
-                />
+                {/* Dynamic Movement Dock: Non-Run Day spotlights Gym first; Run Day spotlights Running first */}
+                {!isRunningDay ? (
+                  <>
+                    {/* Gym Workout Card (Hero Spotlight on Non-Run Day) */}
+                    <GymWorkoutCard
+                      gymLog={appState.workout.gymLog}
+                      lastGymLog={lastGymLog}
+                      onSaveGym={handleSaveGymLog}
+                    />
+
+                    {/* Calisthenics Progression Card */}
+                    <WorkoutCard
+                      workout={appState.workout}
+                      overloadConfig={appState.overloadConfig}
+                      onToggleSet={handleToggleSet}
+                      onAcceptOverload={handleAcceptOverload}
+                      onUpdateRpe={handleUpdateWorkoutRpe}
+                      onUpdateExerciseDifficulty={handleUpdateExerciseDifficulty}
+                    />
+
+                    {/* Running Tracker Card */}
+                    <RunningCard
+                      runLog={appState.workout.runLog}
+                      defaultDistance={2.5}
+                      onSaveRun={handleSaveRun}
+                    />
+                  </>
+                ) : (
+                  <>
+                    {/* Running Tracker Card (Hero Spotlight on Run Day) */}
+                    <RunningCard
+                      runLog={appState.workout.runLog}
+                      defaultDistance={2.5}
+                      onSaveRun={handleSaveRun}
+                    />
+
+                    {/* Calisthenics Progression Card */}
+                    <WorkoutCard
+                      workout={appState.workout}
+                      overloadConfig={appState.overloadConfig}
+                      onToggleSet={handleToggleSet}
+                      onAcceptOverload={handleAcceptOverload}
+                      onUpdateRpe={handleUpdateWorkoutRpe}
+                      onUpdateExerciseDifficulty={handleUpdateExerciseDifficulty}
+                    />
+
+                    {/* Gym Workout Card (Bonus / Dual Session on Run Day) */}
+                    <GymWorkoutCard
+                      gymLog={appState.workout.gymLog}
+                      lastGymLog={lastGymLog}
+                      onSaveGym={handleSaveGymLog}
+                    />
+                  </>
+                )}
               </View>
             )}
 
@@ -698,15 +692,13 @@ export default function App() {
                   </View>
                 </View>
 
-                {/* 24-Hour Visual Schedule Strip */}
-                <TimeBlocksBar
-                  currentPhase={dayPhase}
-                  onSelectBlock={(phase) => setDayPhase(phase)}
-                />
-
-                {/* 90-Minute Timer Card */}
+                {/* Massive 318px Focus Dial with 24-Hour Rhythm Timeline Grid */}
                 <FocusTimerCard
+                  currentPhase={dayPhase}
+                  onSelectPhase={(phase) => setDayPhase(phase)}
                   onCompleteBlock={handleCompleteFocusBlock}
+                  activeFocusSession={appState.activeFocusSession}
+                  onUpdateFocusSession={handleUpdateFocusSession}
                 />
 
                 {/* Today's Completed Sessions History */}
@@ -739,26 +731,19 @@ export default function App() {
                   </View>
                 </View>
 
-                {/* 1. Integrity Card (Purity Shield, Battle Counter, Fall Reset) */}
-                <IntegrityCard
+                {/* 4 Clean Sanctuary Portals with Dedicated Slide-Up Popouts */}
+                <VaultPortals
                   integrity={appState.integrity}
+                  spiritual={appState.spiritual}
+                  sanctuary={appState.sanctuary}
+                  onToggleSpiritual={handleToggleSpiritual}
                   onAddWater={handleAddWater}
                   onOpenMealModal={(meal, rating) => setActiveMealModal({ meal, rating })}
                   onOpenUrgeDefeater={() => setShowUrgeModal(true)}
                   onOpenRelapseModal={() => setShowRelapseModal(true)}
-                />
-
-                {/* 2. Morning Spiritual Grounding Card */}
-                <SpiritualAnchorCard
-                  spiritual={appState.spiritual}
-                  onToggle={handleToggleSpiritual}
-                />
-
-                {/* 3. Evening Sanctuary (Guitar & Reflection) */}
-                <EveningSanctuaryCard
-                  sanctuary={appState.sanctuary}
-                  onAddGuitarMinutes={handleAddGuitar}
-                  onLogHobby={handleLogHobby}
+                  onLogGuitar={handleLogGuitar}
+                  onLogReading={handleLogReading}
+                  onLogWriting={handleLogWriting}
                   onSaveJournal={handleSaveJournal}
                 />
               </View>
@@ -771,305 +756,17 @@ export default function App() {
               <View style={styles.screenContainer}>
                 <View style={styles.tabBannerHeader}>
                   <View>
-                    <Text style={styles.tabBannerTitle}>STATS & MIRROR</Text>
-                    <Text style={styles.tabBannerSubtitle}>Quantified Self: Daily Pulse & 7-Day Sabbath Review</Text>
+                    <Text style={styles.tabBannerTitle}>QUANTIFIED SELF & MIRROR</Text>
+                    <Text style={styles.tabBannerSubtitle}>Calendar, 10-Pillar Compliance & Behavioral Correlations</Text>
                   </View>
                 </View>
 
-                {/* Segmented Daily / Weekly Selector */}
-                <View style={styles.statsSegmentContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.statsSegmentButton,
-                      statsViewMode === 'daily' && styles.statsSegmentButtonActive,
-                    ]}
-                    onPress={() => {
-                      safeHaptics.light();
-                      setStatsViewMode('daily');
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons 
-                      name="today-outline" 
-                      size={15} 
-                      color={statsViewMode === 'daily' ? Colors.primary : Colors.textMuted} 
-                    />
-                    <Text style={[
-                      styles.statsSegmentText,
-                      statsViewMode === 'daily' && styles.statsSegmentTextActive,
-                    ]}>
-                      Daily Rundown
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.statsSegmentButton,
-                      statsViewMode === 'weekly' && styles.statsSegmentButtonActive,
-                    ]}
-                    onPress={() => {
-                      safeHaptics.light();
-                      setStatsViewMode('weekly');
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons 
-                      name="calendar-outline" 
-                      size={15} 
-                      color={statsViewMode === 'weekly' ? Colors.primary : Colors.textMuted} 
-                    />
-                    <Text style={[
-                      styles.statsSegmentText,
-                      statsViewMode === 'weekly' && styles.statsSegmentTextActive,
-                    ]}>
-                      Weekly Review
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* VIEW 1: DAILY RUNDOWN */}
-                {statsViewMode === 'daily' && (
-                  <View style={{ gap: 12 }}>
-                    {/* Executive Daily Matrix Card */}
-                    <View style={styles.contentCard}>
-                      <View style={styles.cardHeaderRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Ionicons name="flash-outline" size={18} color={Colors.primary} />
-                          <Text style={styles.contentCardTitle}>Today's Executive Rundown</Text>
-                        </View>
-                        <View style={styles.goldenZonePill}>
-                          <Text style={styles.goldenZoneText}>Live Pulse</Text>
-                        </View>
-                      </View>
-
-                      {/* 6-Pillar Summary Grid */}
-                      <View style={styles.rundownGrid}>
-                        {/* 1. Hydration */}
-                        <View style={styles.rundownGridItem}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Ionicons name="water-outline" size={15} color={Colors.primary} />
-                            <Text style={styles.rundownItemLabel}>Hydration</Text>
-                          </View>
-                          <Text style={styles.rundownItemValue}>{appState.integrity.waterMl} ml</Text>
-                          <Text style={styles.rundownItemSub}>{waterPercent}% of 3L goal</Text>
-                        </View>
-
-                        {/* 2. Purity & Shield */}
-                        <View style={styles.rundownGridItem}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Ionicons name="shield-checkmark-outline" size={15} color={Colors.primary} />
-                            <Text style={styles.rundownItemLabel}>Integrity</Text>
-                          </View>
-                          <Text style={styles.rundownItemValue}>Day {appState.integrity.purityStreakDays} Clean</Text>
-                          <Text style={styles.rundownItemSub}>{appState.integrity.urgeDivertedCount} Urges Defeated</Text>
-                        </View>
-
-                        {/* 3. Satiety */}
-                        <View style={styles.rundownGridItem}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Ionicons name="restaurant-outline" size={15} color={Colors.primary} />
-                            <Text style={styles.rundownItemLabel}>Satiety</Text>
-                          </View>
-                          <Text style={styles.rundownItemValue}>Zone 3 (80%)</Text>
-                          <Text style={styles.rundownItemSub}>{appState.integrity.fullnessLogs.length}/3 Meals Audited</Text>
-                        </View>
-
-                        {/* 4. Deep Work */}
-                        <View style={styles.rundownGridItem}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Ionicons name="timer-outline" size={15} color={Colors.primary} />
-                            <Text style={styles.rundownItemLabel}>Deep Focus</Text>
-                          </View>
-                          <Text style={styles.rundownItemValue}>{totalFocusMinutesToday} mins</Text>
-                          <Text style={styles.rundownItemSub}>{appState.focusBlocks.length} Sessions Done</Text>
-                        </View>
-
-                        {/* 5. Movement */}
-                        <View style={styles.rundownGridItem}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Ionicons name="barbell-outline" size={15} color={Colors.primary} />
-                            <Text style={styles.rundownItemLabel}>Movement</Text>
-                          </View>
-                          <Text style={styles.rundownItemValue}>
-                            {appState.workout.completed ? 'Complete ✓' : `${setsDoneCount}/${totalSetsTarget} Sets`}
-                          </Text>
-                          <Text style={styles.rundownItemSub}>
-                            {isRunningDay ? '2.5km Run Day' : 'Recovery & Prehab'}
-                          </Text>
-                        </View>
-
-                        {/* 6. Sanctuary */}
-                        <View style={styles.rundownGridItem}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Ionicons name="musical-notes-outline" size={15} color={Colors.primary} />
-                            <Text style={styles.rundownItemLabel}>Sanctuary</Text>
-                          </View>
-                          <Text style={styles.rundownItemValue}>{appState.sanctuary.guitarMinutesToday} mins</Text>
-                          <Text style={styles.rundownItemSub}>Acoustic Guitar</Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* Today's Expense Ledger */}
-                    <View style={styles.contentCard}>
-                      <View style={styles.cardHeaderRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Ionicons name="wallet-outline" size={18} color={Colors.primary} />
-                          <Text style={styles.contentCardTitle}>Today's Expense Ledger</Text>
-                        </View>
-                        <Text style={[styles.contentCardTitle, { color: Colors.primary }]}>
-                          ₦{todaySpent.toLocaleString()}
-                        </Text>
-                      </View>
-
-                      {todayTransactions.length === 0 ? (
-                        <Text style={[styles.cardDescriptionText, { fontStyle: 'italic', marginVertical: Spacing.sm }]}>
-                          No expenses recorded yet today.
-                        </Text>
-                      ) : (
-                        <View style={styles.ledgerList}>
-                          {todayTransactions.map(tx => {
-                            const timeStr = new Date(tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            return (
-                              <View key={tx.id} style={styles.ledgerRow}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                  <Text style={styles.ledgerCategory}>{tx.category}</Text>
-                                  <Text style={styles.ledgerTime}>{timeStr}</Text>
-                                </View>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                  <Text style={styles.ledgerAmount}>₦{tx.amount.toLocaleString()}</Text>
-                                  <TouchableOpacity 
-                                    onPress={() => {
-                                      safeHaptics.warning();
-                                      handleDeleteSpend(tx.id);
-                                    }}
-                                  >
-                                    <Ionicons name="trash-outline" size={15} color={Colors.ruby} />
-                                  </TouchableOpacity>
-                                </View>
-                              </View>
-                            );
-                          })}
-                        </View>
-                      )}
-
-                      <TouchableOpacity 
-                        style={styles.outlineActionButton}
-                        onPress={() => {
-                          safeHaptics.light();
-                          setShowSpendModal(true);
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.outlineActionText}>+ Log Expense with NumPad</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
-
-                {/* VIEW 2: WEEKLY REVIEW */}
-                {statsViewMode === 'weekly' && (
-                  <View style={{ gap: 12 }}>
-                    {/* Weekly Body Composition & Ankle Prehab Audit */}
-                    <TouchableOpacity 
-                      style={styles.contentCard}
-                      onPress={() => {
-                        safeHaptics.light();
-                        setShowBodyModal(true);
-                      }}
-                      activeOpacity={0.8}
-                    >
-                      <View style={styles.cardHeaderRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Ionicons name="scale-outline" size={18} color={Colors.primary} />
-                          <Text style={styles.contentCardTitle}>Sunday Sabbath Physical Audit</Text>
-                        </View>
-                        <Text style={styles.cardActionLink}>Log Audit ➔</Text>
-                      </View>
-
-                      <View style={styles.statsSummaryGrid}>
-                        <View style={styles.statMetricItem}>
-                          <Text style={styles.statMetricValue}>{appState.bodyWeightKg} kg</Text>
-                          <Text style={styles.statMetricLabel}>Weight</Text>
-                          {weightDelta && (
-                            <Text style={[styles.deltaText, Number(weightDelta) <= 0 ? styles.deltaGood : styles.deltaWarn]}>
-                              {Number(weightDelta) > 0 ? `+${weightDelta}` : weightDelta} kg
-                            </Text>
-                          )}
-                        </View>
-
-                        <View style={styles.statMetricItem}>
-                          <Text style={styles.statMetricValue}>{appState.waistCircumferenceCm} cm</Text>
-                          <Text style={styles.statMetricLabel}>Waist</Text>
-                          {waistDelta && (
-                            <Text style={[styles.deltaText, Number(waistDelta) <= 0 ? styles.deltaGood : styles.deltaWarn]}>
-                              {Number(waistDelta) > 0 ? `+${waistDelta}` : waistDelta} cm
-                            </Text>
-                          )}
-                        </View>
-
-                        <View style={styles.statMetricItem}>
-                          <Text style={styles.statMetricValue}>{appState.tummyCircumferenceCm} cm</Text>
-                          <Text style={styles.statMetricLabel}>Tummy</Text>
-                          {tummyDelta && (
-                            <Text style={[styles.deltaText, Number(tummyDelta) <= 0 ? styles.deltaGood : styles.deltaWarn]}>
-                              {Number(tummyDelta) > 0 ? `+${tummyDelta}` : tummyDelta} cm
-                            </Text>
-                          )}
-                        </View>
-
-                        <View style={styles.statMetricItem}>
-                          <Text style={[styles.statMetricValue, { color: Colors.amber }]}>
-                            Level {appState.anklePainRating}
-                          </Text>
-                          <Text style={styles.statMetricLabel}>Ankle Strain</Text>
-                          <Text style={styles.deltaNeutral}>Target: 0/5</Text>
-                        </View>
-                      </View>
-
-                      {appState.bodyMetricsHistory.length > 1 && (
-                        <View style={{ marginTop: Spacing.sm, borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: Spacing.xs }}>
-                          <Text style={styles.subCardHeader}>PREVIOUS AUDIT ({appState.bodyMetricsHistory[1].date})</Text>
-                          <Text style={styles.cardDescriptionText}>
-                            {appState.bodyMetricsHistory[1].weightKg}kg • {appState.bodyMetricsHistory[1].waistCm}cm waist • {appState.bodyMetricsHistory[1].tummyCm}cm tummy
-                          </Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-
-                    {/* 7-Day Cumulative Volume & Discipline */}
-                    <View style={styles.contentCard}>
-                      <View style={styles.cardHeaderRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Ionicons name="analytics-outline" size={18} color={Colors.primary} />
-                          <Text style={styles.contentCardTitle}>7-Day Cumulative Progress</Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.weeklyDisciplineRow}>
-                        <View style={styles.disciplineStatBox}>
-                          <Text style={styles.disciplineValue}>{(weeklyFocusMinutes / 60).toFixed(1)} hrs</Text>
-                          <Text style={styles.disciplineLabel}>Deep Work (7 Days)</Text>
-                        </View>
-                        <View style={styles.disciplineStatBox}>
-                          <Text style={styles.disciplineValue}>₦{weeklyTotalSpent.toLocaleString()}</Text>
-                          <Text style={styles.disciplineLabel}>Total Spending</Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.weeklyDisciplineRow}>
-                        <View style={styles.disciplineStatBox}>
-                          <Text style={styles.disciplineValue}>{appState.integrity.consecutiveControlledSatietyDays}/14 Days</Text>
-                          <Text style={styles.disciplineLabel}>Satiety Streak</Text>
-                        </View>
-                        <View style={styles.disciplineStatBox}>
-                          <Text style={styles.disciplineValue}>{appState.integrity.purityStreakDays} Days</Text>
-                          <Text style={styles.disciplineLabel}>Purity Shield</Text>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                )}
+                {/* Advanced Quantified Self & Accountability Dashboard */}
+                <StatsDashboard
+                  appState={appState}
+                  onOpenSpendModal={() => setShowSpendModal(true)}
+                  onOpenBodyModal={() => setShowBodyModal(true)}
+                />
               </View>
             )}
 
@@ -1082,7 +779,7 @@ export default function App() {
             onSelectTab={setActiveNavTab}
             showSundayBadge={isSunday && !hasLoggedMetricsToday}
           />
-        </ImageBackground>
+        </View>
 
         {/* Global Modals */}
         <QuickSpendModal
@@ -1130,6 +827,21 @@ export default function App() {
           history={appState.bodyMetricsHistory}
           onSave={handleSaveWeeklyBodyMetrics}
           onClose={() => setShowBodyModal(false)}
+        />
+
+        <SettingsModal
+          visible={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          settings={appState.settings}
+          overloadConfig={appState.overloadConfig}
+          onSaveSettings={handleSaveSettings}
+          onSaveKaizenTargets={handleSaveKaizenTargets}
+        />
+
+        <ScholarshipOutreachModal
+          visible={showScholarshipModal}
+          onSave={handleSaveScholarshipOutreach}
+          onClose={() => setShowScholarshipModal(false)}
         />
       </SafeAreaView>
     </SafeAreaProvider>
