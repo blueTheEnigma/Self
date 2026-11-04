@@ -22,6 +22,7 @@ export interface RunLog {
   distanceKm: number;
   paceMinPerKm?: string; // e.g. "5:30"
   durationMinutes?: number;
+  durationSeconds?: number; // 0-59 seconds component of elapsed time
   feelingSummary?: string; // e.g. "Ankle felt solid, breathing controlled"
   timestamp: string;
 }

@@ -176,8 +176,8 @@ export default function App() {
     setAppState({ ...updated });
   };
 
-  const handleToggleSet = async (exIndex: number, setIndex: number, value?: number) => {
-    const updated = await storage.toggleWorkoutSet(exIndex, setIndex, value);
+  const handleToggleSet = async (exIndex: number, setIndex: number) => {
+    const updated = await storage.toggleWorkoutSet(exIndex, setIndex);
     setAppState({ ...updated });
   };
 
@@ -257,8 +257,14 @@ export default function App() {
     setAppState({ ...updated });
   };
 
-  const handleSaveRun = async (dist: number, pace?: string, duration?: number, feeling?: string) => {
-    const updated = await storage.saveRunLog(dist, pace, duration, feeling);
+  const handleSaveRun = async (
+    dist: number, 
+    pace?: string, 
+    durationMinutes?: number, 
+    feeling?: string,
+    durationSeconds?: number
+  ) => {
+    const updated = await storage.saveRunLog(dist, pace, durationMinutes, feeling, durationSeconds);
     setAppState({ ...updated });
   };
 

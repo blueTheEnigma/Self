@@ -453,37 +453,32 @@ class StorageService {
   }
 
   // --- Kaizen Workout & Running Actions ---
-  async toggleWorkoutSet(exerciseIndex: number, setIndex: number, value?: number): Promise<SelfAppState> {
+  async toggleWorkoutSet(exerciseIndex: number, setIndex: number): Promise<SelfAppState> {
     const state = await this.loadState();
     const ex = state.workout.exercises[exerciseIndex];
     if (!ex) return state;
 
     const currentVal = ex.completedSets[setIndex];
-    if (value !== undefined) {
-      ex.completedSets[setIndex] = Math.max(0, value);
-    } else if (currentVal > 0) {
+    if (currentVal > 0) {
       ex.completedSets[setIndex] = 0;
     } else {
       ex.completedSets[setIndex] = ex.target;
     }
 
-    const allDone = state.workout.exercises.every(e => e.completedSets.every(s => s > 0));
-    if (allDone) {
+    const allDone = state.workout.exercises.every(e => e.completedSets.every(s => s >= e.target));
+    if (allDone && !state.workout.completed) {
       state.workout.completed = true;
-      const allHitTarget = state.workout.exercises.every(e => e.completedSets.every(s => s >= e.target));
-      if (allHitTarget) {
-        state.overloadConfig.consecutiveCleanSessions += 1;
+      state.overloadConfig.consecutiveCleanSessions += 1;
 
-        if (state.overloadConfig.consecutiveCleanSessions >= 3) {
-          state.overloadConfig.pendingSuggestion = {
-            exercise: state.workout.exercises[0]?.name || 'Pushups',
-            oldTarget: state.overloadConfig.pushupsTarget,
-            newTarget: state.overloadConfig.pushupsTarget + 1,
-            unit: 'reps'
-          };
-        }
+      if (state.overloadConfig.consecutiveCleanSessions >= 3) {
+        state.overloadConfig.pendingSuggestion = {
+          exercise: state.workout.exercises[0]?.name || 'Pushups',
+          oldTarget: state.overloadConfig.pushupsTarget,
+          newTarget: state.overloadConfig.pushupsTarget + 1,
+          unit: 'reps'
+        };
       }
-    } else {
+    } else if (!allDone) {
       state.workout.completed = false;
     }
 
@@ -491,12 +486,19 @@ class StorageService {
     return state;
   }
 
-  async saveRunLog(distanceKm: number, pace?: string, durationMinutes?: number, feelingSummary?: string): Promise<SelfAppState> {
+  async saveRunLog(
+    distanceKm: number, 
+    pace?: string, 
+    durationMinutes?: number, 
+    feelingSummary?: string,
+    durationSeconds?: number
+  ): Promise<SelfAppState> {
     const state = await this.loadState();
     state.workout.runLog = {
       distanceKm,
       paceMinPerKm: pace,
       durationMinutes,
+      durationSeconds,
       feelingSummary,
       timestamp: new Date().toISOString()
     };
