@@ -5,7 +5,10 @@ import {
   ScrollView, 
   ActivityIndicator, 
   Text, 
-  TouchableOpacity 
+  TouchableOpacity,
+  Keyboard,
+  Platform,
+  KeyboardAvoidingView
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
@@ -96,6 +99,26 @@ export default function App() {
     rating: number;
   } | null>(null);
 
+  // Keyboard presentation listener for bottom scroll padding
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   useEffect(() => {
     async function init() {
       const state = await storage.loadState();
@@ -153,8 +176,8 @@ export default function App() {
     setAppState({ ...updated });
   };
 
-  const handleToggleSet = async (exIndex: number, setIndex: number) => {
-    const updated = await storage.toggleWorkoutSet(exIndex, setIndex);
+  const handleToggleSet = async (exIndex: number, setIndex: number, value?: number) => {
+    const updated = await storage.toggleWorkoutSet(exIndex, setIndex, value);
     setAppState({ ...updated });
   };
 
@@ -456,11 +479,20 @@ export default function App() {
             onOpenSettings={() => setShowSettingsModal(true)}
           />
 
-          <ScrollView 
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
+          <KeyboardAvoidingView 
+            style={{ flex: 1 }} 
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >
+            <ScrollView 
+              style={styles.scrollView}
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 100 }
+              ]}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              showsVerticalScrollIndicator={false}
+            >
             {/* ======================================================== */}
             {/* TAB 1: TODAY (AIRY, COVENANT RING & CHECKLIST)           */}
             {/* ======================================================== */}
@@ -770,16 +802,19 @@ export default function App() {
               </View>
             )}
 
-            <View style={{ height: 36 }} />
+            <View style={{ height: 24 }} />
           </ScrollView>
 
-          {/* 5-Tab Native Navigation Bar */}
-          <BottomNavBar
-            activeTab={activeNavTab}
-            onSelectTab={setActiveNavTab}
-            showSundayBadge={isSunday && !hasLoggedMetricsToday}
-          />
-        </View>
+          {/* 5-Tab Native Navigation Bar - hidden when typing on mobile to maximize viewport */}
+          {keyboardHeight === 0 && (
+            <BottomNavBar
+              activeTab={activeNavTab}
+              onSelectTab={setActiveNavTab}
+              showSundayBadge={isSunday && !hasLoggedMetricsToday}
+            />
+          )}
+        </KeyboardAvoidingView>
+      </View>
 
         {/* Global Modals */}
         <QuickSpendModal

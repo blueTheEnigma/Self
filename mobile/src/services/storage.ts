@@ -258,8 +258,11 @@ class StorageService {
           parsed.workout.completed = false;
           parsed.workout.runLog = undefined; // Reset run log for fresh day
           parsed.workout.gymLog = undefined; // Reset gym log for fresh day
+          parsed.workout.notes = ''; // Reset notes for fresh day
+          parsed.workout.rpeRating = 3; // Reset rpe to default
           parsed.workout.exercises.forEach(e => {
             e.completedSets = [0, 0, 0];
+            e.difficultyRating = undefined;
           });
           parsed.spiritual.wakeupPrayerDone = false;
           parsed.spiritual.trackPrayerDone = false;
@@ -291,6 +294,31 @@ class StorageService {
         // Live day safeguard for gymLog
         if (parsed.workout?.gymLog && (!parsed.workout.gymLog.timestamp || !parsed.workout.gymLog.timestamp.startsWith(today))) {
           parsed.workout.gymLog = undefined;
+        }
+
+        // Live day safeguard for workout date and stale notes carried over before fix
+        if (parsed.workout?.date && parsed.workout.date !== today) {
+          parsed.workout.date = today;
+          parsed.workout.completed = false;
+          parsed.workout.runLog = undefined;
+          parsed.workout.gymLog = undefined;
+          parsed.workout.notes = '';
+          parsed.workout.rpeRating = 3;
+          parsed.workout.exercises.forEach(e => {
+            e.completedSets = [0, 0, 0];
+            e.difficultyRating = undefined;
+          });
+        }
+
+        // Wipe leaked yesterday notes if today's workout has 0 completed sets and is incomplete
+        const yesterdayDate = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        if (
+          parsed.dailyHistory?.[yesterdayDate]?.notes &&
+          parsed.workout?.notes === parsed.dailyHistory[yesterdayDate].notes &&
+          !parsed.workout.completed &&
+          parsed.workout.exercises.every(e => e.completedSets.every(s => s === 0))
+        ) {
+          parsed.workout.notes = '';
         }
 
         // Ensure backward compatibility
@@ -431,25 +459,32 @@ class StorageService {
     if (!ex) return state;
 
     const currentVal = ex.completedSets[setIndex];
-    if (currentVal > 0) {
+    if (value !== undefined) {
+      ex.completedSets[setIndex] = Math.max(0, value);
+    } else if (currentVal > 0) {
       ex.completedSets[setIndex] = 0;
     } else {
-      ex.completedSets[setIndex] = value !== undefined ? value : ex.target;
+      ex.completedSets[setIndex] = ex.target;
     }
 
-    const allDone = state.workout.exercises.every(e => e.completedSets.every(s => s >= e.target));
-    if (allDone && !state.workout.completed) {
+    const allDone = state.workout.exercises.every(e => e.completedSets.every(s => s > 0));
+    if (allDone) {
       state.workout.completed = true;
-      state.overloadConfig.consecutiveCleanSessions += 1;
+      const allHitTarget = state.workout.exercises.every(e => e.completedSets.every(s => s >= e.target));
+      if (allHitTarget) {
+        state.overloadConfig.consecutiveCleanSessions += 1;
 
-      if (state.overloadConfig.consecutiveCleanSessions >= 3) {
-        state.overloadConfig.pendingSuggestion = {
-          exercise: state.workout.exercises[0]?.name || 'Pushups',
-          oldTarget: state.overloadConfig.pushupsTarget,
-          newTarget: state.overloadConfig.pushupsTarget + 1,
-          unit: 'reps'
-        };
+        if (state.overloadConfig.consecutiveCleanSessions >= 3) {
+          state.overloadConfig.pendingSuggestion = {
+            exercise: state.workout.exercises[0]?.name || 'Pushups',
+            oldTarget: state.overloadConfig.pushupsTarget,
+            newTarget: state.overloadConfig.pushupsTarget + 1,
+            unit: 'reps'
+          };
+        }
       }
+    } else {
+      state.workout.completed = false;
     }
 
     await this.saveState(state);

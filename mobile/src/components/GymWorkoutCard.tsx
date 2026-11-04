@@ -141,6 +141,7 @@ export const GymWorkoutCard: React.FC<GymWorkoutCardProps> = ({
           placeholder="e.g. Bench Press 3x10 @ 60kg, Incline DB Press 3x12, Lat Pulldown 4x10, Cable Rows 3x12, Lateral Raises 3x15..."
           placeholderTextColor={Colors.textDisabled}
           multiline
+          scrollEnabled={false}
           numberOfLines={4}
           textAlignVertical="top"
           value={exercisesSummary}
@@ -188,12 +189,26 @@ export const GymWorkoutCard: React.FC<GymWorkoutCardProps> = ({
 
       {/* Feeling / Notes */}
       <View style={styles.sectionBlock}>
-        <Text style={styles.inputLabel}>HOW DID YOU FEEL? (ENERGY, PUMPS, ANKLE)</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.inputLabel}>HOW DID YOU FEEL? (ENERGY, PUMPS, ANKLE)</Text>
+          {feeling.trim().length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                safeHaptics.light();
+                setFeeling('');
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.clearBtnText}>Clear</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <TextInput
           style={styles.textAreaFeeling}
           placeholder="e.g. High energy, good mind-muscle connection. Left ankle had zero pain on leg press."
           placeholderTextColor={Colors.textDisabled}
           multiline
+          scrollEnabled={false}
           numberOfLines={2}
           textAlignVertical="top"
           value={feeling}
@@ -309,6 +324,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     color: Colors.primary,
+  },
+  clearBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.ruby,
   },
   inputLabel: {
     fontSize: 10,

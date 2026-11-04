@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../theme/colors';
 import { WorkoutSession, KaizenOverloadConfig } from '../types';
@@ -9,7 +9,7 @@ import { EXERCISE_GUIDES, ExerciseGuide } from '../services/exerciseData';
 interface WorkoutCardProps {
   workout: WorkoutSession;
   overloadConfig: KaizenOverloadConfig;
-  onToggleSet: (exerciseIndex: number, setIndex: number) => void;
+  onToggleSet: (exerciseIndex: number, setIndex: number, value?: number) => void;
   onAcceptOverload: () => void;
   onOpenGuide?: (guide: ExerciseGuide) => void;
   onUpdateRpe?: (rpe: number, notes?: string) => void;
@@ -30,6 +30,25 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
   const [notesSaved, setNotesSaved] = useState(false);
   const [expandedGuideKey, setExpandedGuideKey] = useState<string | null>(null);
 
+  // Hold Seconds Logger Modal State
+  const [holdModalData, setHoldModalData] = useState<{
+    exIndex: number;
+    setIndex: number;
+    name: string;
+    target: number;
+    currentVal: number;
+  } | null>(null);
+  const [holdSeconds, setHoldSeconds] = useState<number>(20);
+
+  // Sync state if props change (e.g. date rollover or parent state reload)
+  useEffect(() => {
+    setNotes(workout.notes || '');
+  }, [workout.notes]);
+
+  useEffect(() => {
+    setRpe(workout.rpeRating || 3);
+  }, [workout.rpeRating]);
+
   useEffect(() => {
     let interval: any = null;
     if (restSeconds !== null && restSeconds > 0) {
@@ -45,11 +64,24 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
 
   const handleSetPress = (exIndex: number, setIndex: number) => {
     safeHaptics.medium();
-    const currentVal = workout.exercises[exIndex].completedSets[setIndex];
-    onToggleSet(exIndex, setIndex);
+    const ex = workout.exercises[exIndex];
+    const currentVal = ex.completedSets[setIndex];
 
-    if (currentVal === 0) {
-      setRestSeconds(45);
+    if (ex.type === 'HOLD_SECONDS') {
+      const initialSec = currentVal > 0 ? currentVal : ex.target;
+      setHoldSeconds(initialSec);
+      setHoldModalData({
+        exIndex,
+        setIndex,
+        name: ex.name,
+        target: ex.target,
+        currentVal,
+      });
+    } else {
+      onToggleSet(exIndex, setIndex);
+      if (currentVal === 0) {
+        setRestSeconds(45);
+      }
     }
   };
 
@@ -79,7 +111,7 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
   };
 
   const pendingOverload = overloadConfig.pendingSuggestion;
-  const isAllSetsDone = workout.exercises.every(e => e.completedSets.every(s => s >= e.target));
+  const isAllSetsDone = workout.exercises.every(e => e.completedSets.every(s => s > 0));
 
   return (
     <View style={styles.card}>
@@ -167,7 +199,7 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
 
           const guide = EXERCISE_GUIDES[guideKey];
           const isGuideOpen = expandedGuideKey === guideKey;
-          const isExerciseCompleted = ex.completedSets.every(s => s >= ex.target);
+          const isExerciseCompleted = ex.completedSets.every(s => s > 0);
           const hasAnySetsDone = ex.completedSets.some(s => s > 0);
 
           return (
@@ -201,7 +233,17 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
                 <View style={styles.setButtonGroup}>
                   {[0, 1, 2].map(setIndex => {
                     const val = ex.completedSets[setIndex];
-                    const isDone = val >= ex.target;
+                    const isDone = val > 0;
+                    const isTargetMet = val >= ex.target;
+
+                    let buttonLabel = `S${setIndex + 1}`;
+                    if (isDone) {
+                      if (ex.type === 'HOLD_SECONDS') {
+                        buttonLabel = `${val}s`;
+                      } else {
+                        buttonLabel = isTargetMet ? `✓` : `${val}`;
+                      }
+                    }
 
                     return (
                       <TouchableOpacity
@@ -209,12 +251,18 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
                         style={[
                           styles.setButton,
                           isDone && styles.setButtonDone,
+                          isDone && !isTargetMet && styles.setButtonPartial,
                         ]}
                         onPress={() => handleSetPress(exIndex, setIndex)}
                         activeOpacity={0.7}
                       >
-                        <Text style={[styles.setButtonText, isDone && styles.setButtonTextDone]}>
-                          {isDone ? `✓` : `S${setIndex + 1}`}
+                        <Text style={[
+                          styles.setButtonText,
+                          isDone && styles.setButtonTextDone,
+                          isDone && !isTargetMet && styles.setButtonTextPartial,
+                          ex.type === 'HOLD_SECONDS' && isDone && styles.setButtonHoldText,
+                        ]}>
+                          {buttonLabel}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -377,19 +425,211 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
           </View>
 
           {/* Workout Observation Notes */}
-          <TextInput
-            style={styles.notesInput}
-            placeholder="How did your left ankle and endurance feel today? (Optional)"
-            placeholderTextColor={Colors.textMuted}
-            value={notes}
-            onChangeText={setNotes}
-            onBlur={handleSaveNotes}
-          />
-          {notesSaved && (
-            <Text style={styles.notesSavedNotice}>Notes saved to history ✓</Text>
-          )}
+          <View style={styles.notesContainer}>
+            <View style={styles.notesHeaderRow}>
+              <Text style={styles.notesLabel}>SESSION OBSERVATIONS & ANKLE FEELING</Text>
+              {notes.trim().length > 0 && (
+                <TouchableOpacity
+                  onPress={() => {
+                    safeHaptics.light();
+                    setNotes('');
+                    if (onUpdateRpe) onUpdateRpe(rpe, '');
+                    setNotesSaved(true);
+                    setTimeout(() => setNotesSaved(false), 2000);
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.clearNotesText}>Clear</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <TextInput
+              style={styles.notesInput}
+              placeholder="How did your left ankle and endurance feel today? (Optional)"
+              placeholderTextColor={Colors.textMuted}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              value={notes}
+              onChangeText={setNotes}
+              onBlur={handleSaveNotes}
+            />
+            <TouchableOpacity
+              style={[styles.saveNotesBtn, notesSaved && styles.saveNotesBtnSaved]}
+              onPress={handleSaveNotes}
+              activeOpacity={0.8}
+            >
+              <Ionicons 
+                name={notesSaved ? "checkmark-circle" : "save-outline"} 
+                size={14} 
+                color="#ffffff" 
+              />
+              <Text style={styles.saveNotesBtnText}>
+                {notesSaved ? 'Session Notes Saved ✓' : 'Save Session Notes'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
+
+      {/* Hold Seconds Logger Modal */}
+      <Modal
+        visible={Boolean(holdModalData)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setHoldModalData(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.holdModalContent}>
+            {/* Header */}
+            <View style={styles.holdModalHeader}>
+              <View>
+                <Text style={styles.holdModalTitle}>LOG HOLD DURATION</Text>
+                <Text style={styles.holdModalSubtitle}>
+                  {holdModalData?.name} • Set {(holdModalData?.setIndex ?? 0) + 1}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setHoldModalData(null)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close" size={18} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Target Comparison Banner */}
+            <View style={styles.targetBadgeRow}>
+              <Text style={styles.targetBadgeText}>
+                Target: <Text style={{ fontWeight: '800', color: Colors.primary }}>{holdModalData?.target}s</Text>
+              </Text>
+              {holdSeconds >= (holdModalData?.target || 0) ? (
+                <View style={styles.targetMetPill}>
+                  <Ionicons name="checkmark-circle" size={12} color={Colors.mintDark} />
+                  <Text style={styles.targetMetText}>Target Met ✓</Text>
+                </View>
+              ) : (
+                <View style={styles.targetPartialPill}>
+                  <Text style={styles.targetPartialText}>
+                    -{(holdModalData?.target || 0) - holdSeconds}s from target
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Tactile Stepper & Value Display */}
+            <View style={styles.stepperContainer}>
+              <TouchableOpacity
+                style={styles.stepBtn}
+                onPress={() => {
+                  safeHaptics.light();
+                  setHoldSeconds(prev => Math.max(0, prev - 5));
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.stepBtnText}>-5s</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.stepBtnSmall}
+                onPress={() => {
+                  safeHaptics.light();
+                  setHoldSeconds(prev => Math.max(0, prev - 1));
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.stepBtnSmallText}>-1s</Text>
+              </TouchableOpacity>
+
+              <View style={styles.secondsDisplay}>
+                <Text style={styles.secondsDisplayText}>{holdSeconds}</Text>
+                <Text style={styles.secondsDisplayUnit}>sec</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.stepBtnSmall}
+                onPress={() => {
+                  safeHaptics.light();
+                  setHoldSeconds(prev => prev + 1);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.stepBtnSmallText}>+1s</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.stepBtn}
+                onPress={() => {
+                  safeHaptics.light();
+                  setHoldSeconds(prev => prev + 5);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.stepBtnText}>+5s</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Quick 1-Tap Preset Chips */}
+            <Text style={styles.presetsLabel}>QUICK PRESETS:</Text>
+            <View style={styles.presetChipsWrap}>
+              {[15, 20, 25, 30, 35, 40, 45, 60].map(s => {
+                const isSelected = holdSeconds === s;
+                const isTarget = s === holdModalData?.target;
+                return (
+                  <TouchableOpacity
+                    key={s}
+                    style={[styles.holdChip, isSelected && styles.holdChipActive]}
+                    onPress={() => {
+                      safeHaptics.light();
+                      setHoldSeconds(s);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.holdChipText, isSelected && styles.holdChipTextActive]}>
+                      {s}s{isTarget ? ' ★' : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.holdActionsRow}>
+              {holdModalData && holdModalData.currentVal > 0 && (
+                <TouchableOpacity
+                  style={styles.clearSetBtn}
+                  onPress={() => {
+                    safeHaptics.heavy();
+                    onToggleSet(holdModalData.exIndex, holdModalData.setIndex, 0);
+                    setHoldModalData(null);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="trash-outline" size={15} color={Colors.ruby} />
+                  <Text style={styles.clearSetBtnText}>Reset Set</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.saveHoldBtn}
+                onPress={() => {
+                  safeHaptics.success();
+                  if (holdModalData) {
+                    onToggleSet(holdModalData.exIndex, holdModalData.setIndex, holdSeconds);
+                    if (holdModalData.currentVal === 0) {
+                      setRestSeconds(45);
+                    }
+                  }
+                  setHoldModalData(null);
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="checkmark-circle" size={16} color="#ffffff" />
+                <Text style={styles.saveHoldBtnText}>Log {holdSeconds}s Hold</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -821,6 +1061,38 @@ const styles = StyleSheet.create({
   rpeWordActive: {
     color: '#ffffff',
   },
+  setButtonPartial: {
+    backgroundColor: Colors.honey,
+    borderColor: Colors.honeyDark,
+  },
+  setButtonTextPartial: {
+    color: Colors.honeyDark,
+    fontWeight: '800',
+  },
+  setButtonHoldText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  notesContainer: {
+    marginTop: 4,
+    gap: 6,
+  },
+  notesHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  notesLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.textMuted,
+    letterSpacing: 0.5,
+  },
+  clearNotesText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.ruby,
+  },
   notesInput: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.md,
@@ -829,11 +1101,232 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
+    minHeight: 64,
+  },
+  saveNotesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.primary,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    marginTop: 2,
+    ...Shadows.soft,
+  },
+  saveNotesBtnSaved: {
+    backgroundColor: Colors.emerald,
+  },
+  saveNotesBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#ffffff',
   },
   notesSavedNotice: {
     fontSize: 11,
     color: Colors.primary,
     marginTop: 4,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  holdModalContent: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadows.card,
+  },
+  holdModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  holdModalTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary,
+    letterSpacing: 0.8,
+  },
+  holdModalSubtitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginTop: 2,
+  },
+  modalCloseBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.surfaceHighlight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  targetBadgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceHighlight,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
+  },
+  targetBadgeText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  targetMetPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.mint,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+  },
+  targetMetText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.mintDark,
+  },
+  targetPartialPill: {
+    backgroundColor: Colors.honey,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+  },
+  targetPartialText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.honeyDark,
+  },
+  stepperContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: Spacing.md,
+  },
+  stepBtn: {
+    backgroundColor: Colors.surfaceHighlight,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+  },
+  stepBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  stepBtnSmall: {
+    backgroundColor: Colors.surfaceHighlight,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+  },
+  stepBtnSmallText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+  },
+  secondsDisplay: {
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondsDisplayText: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: Colors.primary,
+  },
+  secondsDisplayUnit: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.textMuted,
+  },
+  presetsLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.textMuted,
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  presetChipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: Spacing.lg,
+  },
+  holdChip: {
+    backgroundColor: Colors.surfaceHighlight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  holdChipActive: {
+    backgroundColor: Colors.primaryMuted,
+    borderColor: Colors.primary,
+  },
+  holdChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+  },
+  holdChipTextActive: {
+    color: Colors.primary,
+    fontWeight: '800',
+  },
+  holdActionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  clearSetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: Colors.surfaceHighlight,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  clearSetBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.ruby,
+  },
+  saveHoldBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.primary,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    ...Shadows.soft,
+  },
+  saveHoldBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#ffffff',
   },
 });
