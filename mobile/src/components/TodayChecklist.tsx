@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../theme/colors';
 import { safeHaptics } from '../services/haptics';
+import { SubDomain, WeeklyDisappearChallenge } from '../types';
 
 export type LifeDomain = 'spirit_intellect' | 'physical_sovereignty' | 'craft_sanctuary';
 
@@ -11,13 +12,16 @@ export interface ChecklistItem {
   title: string;
   subtitle: string;
   domain: LifeDomain;
-  category: 'spiritual' | 'movement' | 'nutrition' | 'focus' | 'creative' | 'mind' | 'outreach';
+  subdomain?: SubDomain;
+  category: 'spiritual' | 'movement' | 'nutrition' | 'focus' | 'creative' | 'mind' | 'outreach' | 'stillness' | 'quest';
   isCompleted: boolean;
   onToggle: () => void;
 }
 
 interface TodayChecklistProps {
   items: ChecklistItem[];
+  disappearChallenge?: WeeklyDisappearChallenge;
+  onToggleDisappear?: () => void;
 }
 
 interface DomainConfig {
@@ -60,9 +64,15 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; icon: keyof ty
   creative: { bg: Colors.lavender, text: Colors.lavenderDark, icon: 'musical-notes' },
   mind: { bg: Colors.primaryMuted, text: Colors.primary, icon: 'headset' },
   outreach: { bg: Colors.primaryMuted, text: Colors.primaryDark, icon: 'mail' },
+  stillness: { bg: Colors.lavender, text: Colors.lavenderDark, icon: 'sparkles' },
+  quest: { bg: Colors.honey, text: Colors.honeyDark, icon: 'shield-checkmark' },
 };
 
-export const TodayChecklist: React.FC<TodayChecklistProps> = ({ items }) => {
+export const TodayChecklist: React.FC<TodayChecklistProps> = ({ 
+  items, 
+  disappearChallenge,
+  onToggleDisappear 
+}) => {
   const completedCount = items.filter(i => i.isCompleted).length;
   const totalCount = items.length;
   const isAllSealed = totalCount > 0 && completedCount === totalCount;
@@ -172,6 +182,79 @@ export const TodayChecklist: React.FC<TodayChecklistProps> = ({ items }) => {
           </View>
         );
       })}
+
+      {/* WEEKLY SOVEREIGN QUESTS CARD (e.g. 3 Hours Disappear) */}
+      {disappearChallenge && (
+        <View style={styles.weeklyQuestSection}>
+          <View style={styles.domainHeader}>
+            <View style={styles.domainHeaderLeft}>
+              <View style={[styles.domainIconBadge, { backgroundColor: Colors.honey }]}>
+                <Ionicons name="shield-half" size={13} color={Colors.honeyDark} />
+              </View>
+              <Text style={styles.domainTitle}>Weekly Sovereign Quests</Text>
+            </View>
+
+            <View style={[
+              styles.domainProgressPill, 
+              disappearChallenge.completedThisWeek && styles.domainProgressPillDone
+            ]}>
+              {disappearChallenge.completedThisWeek && (
+                <Ionicons name="checkmark-circle" size={12} color={Colors.emerald} style={{ marginRight: 3 }} />
+              )}
+              <Text style={[
+                styles.domainProgressText, 
+                disappearChallenge.completedThisWeek && styles.domainProgressTextDone
+              ]}>
+                {disappearChallenge.completedThisWeek ? '1/1 Sealed' : '0/1 This Week'}
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.itemCard,
+              disappearChallenge.completedThisWeek && styles.itemCardCompleted,
+            ]}
+            onPress={() => {
+              safeHaptics.medium();
+              if (onToggleDisappear) onToggleDisappear();
+            }}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.iconChip, { backgroundColor: Colors.honey }]}>
+              <Ionicons name="airplane" size={15} color={Colors.honeyDark} />
+            </View>
+
+            <View style={styles.contentCol}>
+              <View style={styles.titleRow}>
+                <Text style={[
+                  styles.itemTitle,
+                  disappearChallenge.completedThisWeek && styles.itemTitleCompleted
+                ]}>
+                  3 Hours Disappear Challenge
+                </Text>
+                <View style={styles.weeklyBadge}>
+                  <Text style={styles.weeklyBadgeText}>Weekly</Text>
+                </View>
+              </View>
+              <Text style={styles.itemSubtitle}>
+                {disappearChallenge.completedThisWeek
+                  ? `Sealed on ${disappearChallenge.completedDate || 'this week'} • 3h offline sanctuary honored`
+                  : '3 hours completely offline & tech-free sanctuary once per week'}
+              </Text>
+            </View>
+
+            <View style={[
+              styles.checkbox,
+              disappearChallenge.completedThisWeek && styles.checkboxDone,
+            ]}>
+              {disappearChallenge.completedThisWeek && (
+                <Ionicons name="checkmark" size={13} color="#ffffff" />
+              )}
+            </View>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -356,5 +439,27 @@ const styles = StyleSheet.create({
   checkboxDone: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
+  },
+  weeklyQuestSection: {
+    marginTop: Spacing.lg,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  weeklyBadge: {
+    backgroundColor: Colors.honey,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 3,
+  },
+  weeklyBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.honeyDark,
   },
 });

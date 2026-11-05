@@ -214,12 +214,105 @@ export interface AppSettings {
   nonRunDayPreference: 'gym' | 'calisthenics' | 'hybrid';
   waterGoalMl: number;
   deepWorkGoalMinutes: number;
+  trainingWeekTier?: TrainingWeekTier; // default: 'WEEKS_1_2'
+  weightsVariantPreference?: 'AUTO' | 'WORKOUT_A' | 'WORKOUT_B';
+  routineModePreference?: RoutineMode;
+  decoupledTasks?: CovenantTask[];
   exerciseVariants?: {
     pushupsName?: string;
     horseStanceName?: string;
     activeHangName?: string;
     situpsName?: string;
   };
+}
+
+export type LifeDomain = 'spirit_intellect' | 'physical_sovereignty' | 'craft_sanctuary';
+
+export type SubDomain = 
+  | 'morning_grounding'
+  | 'movement_prayer'
+  | 'scripture_study'
+  | 'intellectual_growth'
+  | 'scholarship_outreach'
+  | 'mindfulness_stillness'
+  | 'run_day_pre_run_warmup'
+  | 'run_day_main_run'
+  | 'run_day_post_run_conditioning'
+  | 'run_day_calisthenics'
+  | 'run_day_weights'
+  | 'run_day_cooldown'
+  | 'non_run_activation'
+  | 'non_run_mobility_lower'
+  | 'non_run_mobility_upper'
+  | 'non_run_mobility_lateral'
+  | 'general_movement'
+  | 'nutrition_satiety'
+  | 'deep_work_focus'
+  | 'acoustic_tactile'
+  | 'evening_reflection'
+  | 'weekly_sovereign_quest';
+
+export type TrainingWeekTier = 'WEEKS_1_2' | 'WEEKS_3_4' | 'WEEKS_5_PLUS';
+export type WeightsVariant = 'AUTO' | 'WORKOUT_A' | 'WORKOUT_B';
+export type RoutineMode = 'STANDARD' | 'FLOOR_EXPRESS';
+
+export interface PhasedExerciseItem {
+  id: string;
+  name: string;
+  subdomain: SubDomain;
+  targetDesc: string; // e.g. "3 x 8" or "1 x 20s" or "2 x 10m"
+  setsTarget: number;
+  completedSets: number[];
+  unit: 'reps' | 'seconds' | 'metres';
+  cues?: string[];
+  notes?: string;
+  unlockWeek?: number; // 3 for Bear Crawl, Crab Hold, Toe Sit
+  cautionNote?: string; // "Skip if left shoulder complains"
+  isFloorVersion?: boolean;
+}
+
+export interface WorkoutPhaseGroup {
+  id: string;
+  subdomain: SubDomain;
+  title: string;
+  durationLabel?: string;
+  exercises: PhasedExerciseItem[];
+  isCompleted: boolean;
+  isExpanded?: boolean;
+}
+
+export interface MeditationState {
+  targetMinutes: number; // default 10
+  completedToday: boolean;
+  todayMinutesLogged: number;
+  weeklyHistory: Record<string, boolean>; // 'YYYY-MM-DD': boolean
+  qualifyingWeeksCount: number;
+  pendingKaizenElevation?: {
+    suggestedMinutes: number;
+    daysCompletedLastWeek: number;
+  };
+}
+
+export interface WeeklyDisappearChallenge {
+  completedThisWeek: boolean;
+  completedDate?: string;
+  durationMinutes: number; // 180 (3h)
+  reflection?: string;
+}
+
+export interface CovenantTask {
+  id: string;
+  title: string;
+  subtitle: string;
+  domain: LifeDomain;
+  subdomain: SubDomain;
+  category: 'spiritual' | 'movement' | 'nutrition' | 'focus' | 'creative' | 'mind' | 'outreach' | 'stillness' | 'quest';
+  isEnabled: boolean;
+  cadence: 'DAILY' | 'WEEKLY_TARGET';
+  isCustom?: boolean;
+  targetValue?: number;
+  unit?: string;
+  completedDates?: string[];
 }
 
 export interface SelfAppState {
@@ -242,4 +335,7 @@ export interface SelfAppState {
   anklePainRating: number; // 0-10
   bodyMetricsHistory: BodyMetricLog[];
   dailyHistory: Record<string, DailySnapshot>;
+  meditation: MeditationState;
+  disappearChallenge: WeeklyDisappearChallenge;
+  activeWorkoutPhases?: WorkoutPhaseGroup[];
 }

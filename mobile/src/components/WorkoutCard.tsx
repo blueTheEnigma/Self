@@ -2,35 +2,65 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../theme/colors';
-import { WorkoutSession, KaizenOverloadConfig } from '../types';
+import { 
+  WorkoutSession, 
+  KaizenOverloadConfig, 
+  WorkoutPhaseGroup, 
+  TrainingWeekTier, 
+  WeightsVariant, 
+  RoutineMode 
+} from '../types';
 import { safeHaptics } from '../services/haptics';
-import { EXERCISE_GUIDES, ExerciseGuide } from '../services/exerciseData';
+import { EXERCISE_GUIDES } from '../services/exerciseData';
 
 interface WorkoutCardProps {
   workout: WorkoutSession;
   overloadConfig: KaizenOverloadConfig;
-  onToggleSet: (exerciseIndex: number, setIndex: number) => void;
+  phases?: WorkoutPhaseGroup[];
+  trainingWeekTier?: TrainingWeekTier;
+  weightsVariant?: WeightsVariant;
+  routineMode?: RoutineMode;
+  onTogglePhaseSet: (phaseIndex: number, exerciseIndex: number, setIndex: number) => void;
+  onChangeRoutineMode: (mode: RoutineMode) => void;
+  onChangeTrainingWeekTier: (tier: TrainingWeekTier) => void;
+  onChangeWeightsVariant: (variant: WeightsVariant) => void;
   onAcceptOverload: () => void;
-  onOpenGuide?: (guide: ExerciseGuide) => void;
   onUpdateRpe?: (rpe: number, notes?: string) => void;
-  onUpdateExerciseDifficulty?: (exerciseIndex: number, difficulty: number) => void;
 }
 
 export const WorkoutCard: React.FC<WorkoutCardProps> = ({
   workout,
   overloadConfig,
-  onToggleSet,
+  phases = [],
+  trainingWeekTier = 'WEEKS_1_2',
+  weightsVariant = 'WORKOUT_A',
+  routineMode = 'STANDARD',
+  onTogglePhaseSet,
+  onChangeRoutineMode,
+  onChangeTrainingWeekTier,
+  onChangeWeightsVariant,
   onAcceptOverload,
   onUpdateRpe,
-  onUpdateExerciseDifficulty,
 }) => {
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
   const [rpe, setRpe] = useState(workout.rpeRating || 3);
   const [notes, setNotes] = useState(workout.notes || '');
   const [notesSaved, setNotesSaved] = useState(false);
-  const [expandedGuideKey, setExpandedGuideKey] = useState<string | null>(null);
+  const [expandedPhaseIds, setExpandedPhaseIds] = useState<Record<string, boolean>>({});
+  const [expandedGuideId, setExpandedGuideId] = useState<string | null>(null);
 
-  // Sync state if props change (e.g. date rollover or parent state reload)
+  // Initialize expanded phases (all expanded by default)
+  useEffect(() => {
+    if (phases.length > 0) {
+      const initial: Record<string, boolean> = {};
+      phases.forEach(p => {
+        initial[p.id] = true;
+      });
+      setExpandedPhaseIds(prev => ({ ...initial, ...prev }));
+    }
+  }, [phases]);
+
+  // Sync state if props change
   useEffect(() => {
     setNotes(workout.notes || '');
   }, [workout.notes]);
@@ -52,20 +82,27 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
     return () => clearInterval(interval);
   }, [restSeconds]);
 
-  const handleSetPress = (exIndex: number, setIndex: number) => {
-    safeHaptics.medium();
-    const currentVal = workout.exercises[exIndex].completedSets[setIndex];
-    onToggleSet(exIndex, setIndex);
-
-    if (currentVal === 0) {
-      setRestSeconds(45);
-    }
+  const togglePhaseExpanded = (phaseId: string) => {
+    safeHaptics.light();
+    setExpandedPhaseIds(prev => ({
+      ...prev,
+      [phaseId]: !prev[phaseId]
+    }));
   };
 
-  const handleExerciseDifficulty = (exIndex: number, diff: number) => {
-    safeHaptics.light();
-    if (onUpdateExerciseDifficulty) {
-      onUpdateExerciseDifficulty(exIndex, diff);
+  const handleSetPress = (phaseIndex: number, exIndex: number, setIndex: number) => {
+    safeHaptics.medium();
+    const phase = phases[phaseIndex];
+    const ex = phase?.exercises[exIndex];
+    const currentVal = ex?.completedSets[setIndex] || 0;
+
+    onTogglePhaseSet(phaseIndex, exIndex, setIndex);
+
+    // If starting a set, trigger rest timer
+    if (currentVal === 0) {
+      // 60s for calisthenics & conditioning, 45s for standard
+      const isCircuitOrCrawl = phase?.id.includes('calisthenics') || phase?.id.includes('bear_crawl');
+      setRestSeconds(isCircuitOrCrawl ? 60 : 45);
     }
   };
 
@@ -82,78 +119,157 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
     setTimeout(() => setNotesSaved(false), 2500);
   };
 
-  const toggleGuide = (key: string) => {
+  const toggleGuide = (guideId: string) => {
     safeHaptics.light();
-    setExpandedGuideKey(prev => (prev === key ? null : key));
+    setExpandedGuideId(prev => (prev === guideId ? null : guideId));
   };
 
-  const pendingOverload = overloadConfig.pendingSuggestion;
-  const isAllSetsDone = workout.exercises.every(e => e.completedSets.every(s => s >= e.target));
+  const totalExercises = phases.reduce((acc, p) => acc + p.exercises.length, 0);
+  const completedExercises = phases.reduce(
+    (acc, p) => acc + p.exercises.filter(e => e.completedSets.every(s => s > 0)).length, 
+    0
+  );
+  const isAllPhasesDone = totalExercises > 0 && completedExercises === totalExercises;
+  const isFloorMode = routineMode === 'FLOOR_EXPRESS';
 
   return (
     <View style={styles.card}>
-      {/* Header */}
+      {/* Header HUD */}
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
-          <View style={[styles.iconBox, { backgroundColor: isAllSetsDone ? Colors.mint : Colors.honey }]}>
+          <View style={[styles.iconBox, { backgroundColor: isAllPhasesDone ? Colors.mint : Colors.honey }]}>
             <Ionicons 
-              name={isAllSetsDone ? "trophy" : "barbell"} 
+              name={isAllPhasesDone ? "trophy" : "barbell"} 
               size={20} 
-              color={isAllSetsDone ? Colors.primary : Colors.honeyDark} 
+              color={isAllPhasesDone ? Colors.primary : Colors.honeyDark} 
             />
           </View>
           <View>
-            <Text style={styles.cardTitle}>KAIZEN MOVEMENT</Text>
+            <Text style={styles.cardTitle}>
+              {workout.isRunDay ? 'RUN DAY PROTOCOL' : 'MOBILITY & PREHAB FLOW'}
+            </Text>
             <Text style={styles.cardSubtitle}>
               {workout.isRunDay 
-                ? `2.5 km Run + Track Calisthenics` 
-                : `Home Calisthenics & Ankle Prehab`}
+                ? (isFloorMode ? 'Floor Express: Field Walk & Calisthenics' : `2km Run • Calisthenics • Weights ${weightsVariant === 'WORKOUT_A' ? 'A' : 'B'}`)
+                : (isFloorMode ? 'Floor Express: 4-Min Essential Mobility' : '19 Movements across 4 Anatomical Clusters')}
             </Text>
           </View>
         </View>
 
-        {isAllSetsDone ? (
+        {isAllPhasesDone ? (
           <View style={styles.completedBadge}>
             <Ionicons name="checkmark-done" size={14} color={Colors.primary} />
             <Text style={styles.completedText}>SEALED ✓</Text>
           </View>
         ) : (
           <Text style={styles.progressCounter}>
-            {workout.exercises.reduce((acc, ex) => acc + ex.completedSets.filter(s => s > 0).length, 0)} / 12 Sets
+            {completedExercises} / {totalExercises} Done
           </Text>
         )}
       </View>
 
-      {/* Kaizen Progressive Overload Banner */}
-      {pendingOverload && (
-        <View style={styles.overloadBanner}>
-          <Ionicons name="trending-up" size={18} color={Colors.honeyDark} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.overloadTitle}>KAIZEN PROGRESSION UNLOCKED</Text>
-            <Text style={styles.overloadDesc}>
-              You nailed 3 clean sessions of {pendingOverload.exercise}! Step up to{' '}
-              <Text style={{ fontWeight: '800', color: Colors.honeyDark }}>
-                3×{pendingOverload.newTarget} {pendingOverload.unit}
-              </Text>{' '}
-              today?
-            </Text>
+      {/* Routine Mode Switcher (Standard Protocol vs Floor Express) */}
+      <View style={styles.modeSwitcherContainer}>
+        <TouchableOpacity
+          style={[styles.modePill, !isFloorMode && styles.modePillActive]}
+          onPress={() => {
+            safeHaptics.light();
+            onChangeRoutineMode('STANDARD');
+          }}
+          activeOpacity={0.8}
+        >
+          <Ionicons 
+            name="flame" 
+            size={13} 
+            color={!isFloorMode ? '#ffffff' : Colors.textMuted} 
+          />
+          <Text style={[styles.modePillText, !isFloorMode && styles.modePillTextActive]}>
+            Standard Protocol
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.modePill, isFloorMode && styles.modePillFloorActive]}
+          onPress={() => {
+            safeHaptics.light();
+            onChangeRoutineMode('FLOOR_EXPRESS');
+          }}
+          activeOpacity={0.8}
+        >
+          <Ionicons 
+            name="leaf" 
+            size={13} 
+            color={isFloorMode ? '#ffffff' : Colors.textMuted} 
+          />
+          <Text style={[styles.modePillText, isFloorMode && styles.modePillTextActive]}>
+            Floor Express (Low Energy)
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Week Tier & Weights Selector Toolbar (Only in Standard Mode) */}
+      {!isFloorMode && (
+        <View style={styles.toolbarContainer}>
+          {/* Training Week Tiers */}
+          <View style={styles.weekTierRow}>
+            <Text style={styles.toolbarLabel}>WEEK TIER:</Text>
+            <View style={styles.tierPillsWrap}>
+              {(['WEEKS_1_2', 'WEEKS_3_4', 'WEEKS_5_PLUS'] as TrainingWeekTier[]).map(tier => {
+                const isSelected = trainingWeekTier === tier;
+                const label = tier === 'WEEKS_1_2' ? 'Wk 1-2' : tier === 'WEEKS_3_4' ? 'Wk 3-4' : 'Wk 5+';
+                return (
+                  <TouchableOpacity
+                    key={tier}
+                    style={[styles.tierPill, isSelected && styles.tierPillActive]}
+                    onPress={() => {
+                      safeHaptics.light();
+                      onChangeTrainingWeekTier(tier);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.tierPillText, isSelected && styles.tierPillTextActive]}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-          <TouchableOpacity 
-            style={styles.overloadBtn}
-            onPress={() => {
-              safeHaptics.success();
-              onAcceptOverload();
-            }}
-          >
-            <Text style={styles.overloadBtnText}>Accept</Text>
-          </TouchableOpacity>
+
+          {/* If Run Day, offer Weights Workout A vs B selector */}
+          {workout.isRunDay && (
+            <View style={styles.weightsVariantRow}>
+              <Text style={styles.toolbarLabel}>WEIGHTS SPLIT:</Text>
+              <View style={styles.tierPillsWrap}>
+                {(['WORKOUT_A', 'WORKOUT_B'] as WeightsVariant[]).map(v => {
+                  const isSelected = weightsVariant === v;
+                  const label = v === 'WORKOUT_A' ? 'Workout A (Squat/Bench)' : 'Workout B (RDL/Press)';
+                  return (
+                    <TouchableOpacity
+                      key={v}
+                      style={[styles.weightsPill, isSelected && styles.weightsPillActive]}
+                      onPress={() => {
+                        safeHaptics.light();
+                        onChangeWeightsVariant(v);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.weightsPillText, isSelected && styles.weightsPillTextActive]}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
         </View>
       )}
 
-      {/* Active Rest Countdown */}
-      {restSeconds !== null && !isAllSetsDone && (
+      {/* Active Rest Countdown Banner */}
+      {restSeconds !== null && !isAllPhasesDone && (
         <View style={styles.restTimerBanner}>
-          <Ionicons name="timer" size={16} color={Colors.cyan} />
+          <Ionicons name="timer" size={16} color={Colors.primary} />
           <Text style={styles.restTimerText}>
             Rest Interval: <Text style={styles.timerBold}>{restSeconds}s</Text>
           </Text>
@@ -166,138 +282,134 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
         </View>
       )}
 
-      {/* Exercises List */}
-      <View style={styles.exerciseList}>
-        {workout.exercises.map((ex, exIndex) => {
-          let guideKey = 'pushups';
-          if (ex.name === 'Horse Stance') guideKey = 'horseStance';
-          if (ex.name === 'Active Dead Hang') guideKey = 'activeDeadHang';
-          if (ex.name === 'Situps') guideKey = 'situps';
-
-          const guide = EXERCISE_GUIDES[guideKey];
-          const isGuideOpen = expandedGuideKey === guideKey;
-          const isExerciseCompleted = ex.completedSets.every(s => s >= ex.target);
-          const hasAnySetsDone = ex.completedSets.some(s => s > 0);
+      {/* Phased Routine Deck */}
+      <View style={styles.phasesDeck}>
+        {phases.map((phase, phaseIndex) => {
+          const isExpanded = expandedPhaseIds[phase.id] ?? true;
+          const phaseCompletedExercises = phase.exercises.filter(
+            e => e.completedSets.every(s => s > 0)
+          ).length;
+          const isPhaseDone = phase.exercises.length > 0 && phaseCompletedExercises === phase.exercises.length;
 
           return (
-            <View key={ex.name} style={styles.exerciseBlock}>
-              {/* Exercise Header Row */}
-              <View style={styles.exerciseRow}>
-                <View style={styles.exerciseInfo}>
-                  <View style={styles.titleWithGuide}>
-                    <Text style={styles.exerciseName}>{ex.name}</Text>
-                    <TouchableOpacity 
-                      style={[styles.infoBadge, isGuideOpen && styles.infoBadgeActive]}
-                      onPress={() => toggleGuide(guideKey)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons 
-                        name={isGuideOpen ? "chevron-up" : "play-circle"} 
-                        size={13} 
-                        color={isGuideOpen ? '#ffffff' : Colors.primary} 
-                      />
-                      <Text style={[styles.infoText, isGuideOpen && styles.infoTextActive]}>
-                        {isGuideOpen ? 'Close' : 'Guide'}
-                      </Text>
-                    </TouchableOpacity>
+            <View key={phase.id} style={styles.phaseCard}>
+              {/* Phase Header */}
+              <TouchableOpacity
+                style={styles.phaseHeader}
+                onPress={() => togglePhaseExpanded(phase.id)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.phaseHeaderLeft}>
+                  <View style={[styles.phaseDot, isPhaseDone && styles.phaseDotDone]} />
+                  <View>
+                    <Text style={styles.phaseTitle}>{phase.title}</Text>
+                    {phase.durationLabel && (
+                      <Text style={styles.phaseDuration}>{phase.durationLabel}</Text>
+                    )}
                   </View>
-                  <Text style={styles.targetLabel}>
-                    Target: 3 × {ex.target} {ex.type === 'HOLD_SECONDS' ? 'sec hold' : 'reps'}
-                  </Text>
                 </View>
 
-                {/* Set Buttons */}
-                <View style={styles.setButtonGroup}>
-                  {[0, 1, 2].map(setIndex => {
-                    const val = ex.completedSets[setIndex];
-                    const isDone = val >= ex.target;
+                <View style={styles.phaseHeaderRight}>
+                  {isPhaseDone ? (
+                    <View style={styles.phaseDoneBadge}>
+                      <Ionicons name="checkmark" size={12} color={Colors.mintDark} />
+                      <Text style={styles.phaseDoneText}>SEALED</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.phaseCounterText}>
+                      {phaseCompletedExercises}/{phase.exercises.length}
+                    </Text>
+                  )}
+                  <Ionicons 
+                    name={isExpanded ? "chevron-up" : "chevron-down"} 
+                    size={16} 
+                    color={Colors.textMuted} 
+                  />
+                </View>
+              </TouchableOpacity>
+
+              {/* Phase Exercises (When Expanded) */}
+              {isExpanded && (
+                <View style={styles.phaseBody}>
+                  {phase.exercises.map((ex, exIndex) => {
+                    const isExDone = ex.completedSets.every(s => s > 0);
+                    const guide = EXERCISE_GUIDES[ex.id] || EXERCISE_GUIDES[ex.name.toLowerCase().replace(/[^a-z]/g, '')];
+                    const isGuideOpen = expandedGuideId === ex.id;
 
                     return (
-                      <TouchableOpacity
-                        key={setIndex}
-                        style={[
-                          styles.setButton,
-                          isDone && styles.setButtonDone,
-                        ]}
-                        onPress={() => handleSetPress(exIndex, setIndex)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.setButtonText, isDone && styles.setButtonTextDone]}>
-                          {isDone ? `✓` : `S${setIndex + 1}`}
-                        </Text>
-                      </TouchableOpacity>
+                      <View key={ex.id} style={styles.exerciseItem}>
+                        <View style={styles.exerciseMainRow}>
+                          <View style={styles.exerciseTextWrap}>
+                            <View style={styles.nameRow}>
+                              <Text style={[styles.exerciseNameText, isExDone && styles.exerciseNameTextDone]}>
+                                {ex.name}
+                              </Text>
+                              {ex.unlockWeek && (
+                                <View style={styles.unlockBadge}>
+                                  <Text style={styles.unlockBadgeText}>Week {ex.unlockWeek}+</Text>
+                                </View>
+                              )}
+                              {guide && (
+                                <TouchableOpacity 
+                                  style={styles.guideMiniBtn}
+                                  onPress={() => toggleGuide(ex.id)}
+                                  activeOpacity={0.7}
+                                >
+                                  <Ionicons 
+                                    name={isGuideOpen ? "chevron-up-circle" : "information-circle-outline"} 
+                                    size={14} 
+                                    color={Colors.primary} 
+                                  />
+                                </TouchableOpacity>
+                              )}
+                            </View>
+
+                            <Text style={styles.targetDescText}>{ex.targetDesc}</Text>
+
+                            {/* Caution Alert (e.g. Crab hold left shoulder) */}
+                            {ex.cautionNote && (
+                              <View style={styles.cautionBanner}>
+                                <Ionicons name="warning-outline" size={12} color={Colors.amber} />
+                                <Text style={styles.cautionText}>{ex.cautionNote}</Text>
+                              </View>
+                            )}
+                          </View>
+
+                          {/* Set Check Buttons */}
+                          <View style={styles.setButtonGroup}>
+                            {ex.completedSets.map((val, setIndex) => {
+                              const isSetDone = val > 0;
+                              return (
+                                <TouchableOpacity
+                                  key={setIndex}
+                                  style={[styles.setBtn, isSetDone && styles.setBtnDone]}
+                                  onPress={() => handleSetPress(phaseIndex, exIndex, setIndex)}
+                                  activeOpacity={0.7}
+                                >
+                                  <Text style={[styles.setBtnText, isSetDone && styles.setBtnTextDone]}>
+                                    {isSetDone ? '✓' : `S${setIndex + 1}`}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        </View>
+
+                        {/* Guide Panel Details */}
+                        {isGuideOpen && guide && (
+                          <View style={styles.guideDetailBox}>
+                            <Text style={styles.guideMuscles}>🎯 {guide.primaryMuscles}</Text>
+                            {guide.cues.map((cue, cIdx) => (
+                              <Text key={cIdx} style={styles.guideCue}>• {cue}</Text>
+                            ))}
+                            {guide.kaizenTip && (
+                              <Text style={styles.guideKaizen}>💡 {guide.kaizenTip}</Text>
+                            )}
+                          </View>
+                        )}
+                      </View>
                     );
                   })}
-                </View>
-              </View>
-
-              {/* Per-Exercise Difficulty Selector */}
-              {(isExerciseCompleted || hasAnySetsDone) && (
-                <View style={styles.perExerciseDiffRow}>
-                  <Text style={styles.perExerciseDiffLabel}>DIFFICULTY:</Text>
-                  <View style={styles.diffPillsWrap}>
-                    {[
-                      { val: 1, label: '1 Easy' },
-                      { val: 2, label: '2 Light' },
-                      { val: 3, label: '3 Optimal' },
-                      { val: 4, label: '4 Hard' },
-                      { val: 5, label: '5 Max' },
-                    ].map(d => {
-                      const active = ex.difficultyRating === d.val;
-                      return (
-                        <TouchableOpacity
-                          key={d.val}
-                          style={[styles.diffPill, active && styles.diffPillActive]}
-                          onPress={() => handleExerciseDifficulty(exIndex, d.val)}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={[styles.diffPillText, active && styles.diffPillTextActive]}>
-                            {d.label}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              )}
-
-              {/* In-Place Expandable Technique Guide */}
-              {isGuideOpen && guide && (
-                <View style={styles.expandableGuideCard}>
-                  {/* Form Cues */}
-                  <View style={styles.guideContentSection}>
-                    <View style={styles.tempoRow}>
-                      <Text style={styles.guideBadge}>{guide.category}</Text>
-                      <Text style={styles.guideTempoText}>{guide.animationFrames.tempo}</Text>
-                    </View>
-
-                    <Text style={styles.guideSectionTitle}>PERFECT FORM CUES</Text>
-                    {guide.cues.map((c, i) => (
-                      <View key={i} style={styles.cueRow}>
-                        <Ionicons name="checkmark-circle" size={14} color={Colors.primary} style={{ marginTop: 2 }} />
-                        <Text style={styles.cueText}>{c}</Text>
-                      </View>
-                    ))}
-
-                    {/* Mistakes to Avoid */}
-                    <Text style={[styles.guideSectionTitle, { color: Colors.ruby, marginTop: 10 }]}>
-                      MISTAKES TO AVOID
-                    </Text>
-                    {guide.mistakesToAvoid.map((m, i) => (
-                      <View key={i} style={styles.cueRow}>
-                        <Ionicons name="alert-circle" size={14} color={Colors.ruby} style={{ marginTop: 2 }} />
-                        <Text style={styles.cueText}>{m}</Text>
-                      </View>
-                    ))}
-
-                    {/* Kaizen Tip */}
-                    <View style={styles.kaizenTipBox}>
-                      <Ionicons name="sparkles" size={15} color={Colors.honeyDark} />
-                      <Text style={styles.kaizenTipText}>
-                        <Text style={{ fontWeight: '700' }}>Form Tip: </Text>{guide.kaizenTip}
-                      </Text>
-                    </View>
-                  </View>
                 </View>
               )}
             </View>
@@ -305,133 +417,69 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
         })}
       </View>
 
-      {/* Ankle Prehab Section */}
-      <View style={styles.prehabContainer}>
-        <View style={styles.prehabHeader}>
-          <Ionicons name="shield-checkmark" size={15} color={Colors.primary} />
-          <Text style={styles.prehabTitle}>LEFT ANKLE PREHAB & TENDON REPAIR</Text>
-        </View>
-        <View style={styles.prehabButtonsRow}>
+      {/* RPE Rating Selector */}
+      <View style={styles.rpeSection}>
+        <Text style={styles.rpeSectionTitle}>SESSION INTENSITY (RPE):</Text>
+        <View style={styles.rpePillsWrap}>
           {[
-            { key: 'tibialisWallRaises', label: 'Tibialis Raises' },
-            { key: 'eccentricCalfRaises', label: 'Eccentric Calves' },
-            { key: 'couchStretch', label: 'Couch Stretch' },
-            { key: 'hipFlow9090', label: '90-90 Hip Flow' },
+            { val: 1, label: '1 Very Light' },
+            { val: 2, label: '2 Light' },
+            { val: 3, label: '3 Moderate' },
+            { val: 4, label: '4 Hard' },
+            { val: 5, label: '5 All-Out' },
           ].map(item => {
-            const isPrehabOpen = expandedGuideKey === item.key;
+            const isRpeActive = rpe === item.val;
             return (
-              <TouchableOpacity 
-                key={item.key}
-                style={[styles.prehabPill, isPrehabOpen && styles.prehabPillActive]}
-                onPress={() => toggleGuide(item.key)}
+              <TouchableOpacity
+                key={item.val}
+                style={[styles.rpePill, isRpeActive && styles.rpePillActive]}
+                onPress={() => handleRpeSelect(item.val)}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.prehabPillText, isPrehabOpen && styles.prehabPillTextActive]}>
-                  {item.label} {isPrehabOpen ? '▲' : 'ℹ️'}
+                <Text style={[styles.rpePillText, isRpeActive && styles.rpePillTextActive]}>
+                  {item.label}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
-
-        {/* Expandable Prehab Guide */}
-        {expandedGuideKey && EXERCISE_GUIDES[expandedGuideKey]?.category.includes('Ankle') && (
-          <View style={[styles.expandableGuideCard, { marginTop: 12 }]}>
-            <View style={styles.guideContentSection}>
-              <Text style={styles.guideSectionTitle}>THERAPEUTIC CUES</Text>
-              {EXERCISE_GUIDES[expandedGuideKey].cues.map((c, i) => (
-                <View key={i} style={styles.cueRow}>
-                  <Ionicons name="checkmark-circle" size={14} color={Colors.primary} style={{ marginTop: 2 }} />
-                  <Text style={styles.cueText}>{c}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
       </View>
 
-      {/* CELEBRATION SUMMARY WHEN ALL SETS ARE DONE */}
-      {isAllSetsDone && (
-        <View style={styles.celebrationCard}>
-          <View style={styles.celebHeader}>
-            <Ionicons name="sparkles" size={18} color={Colors.primary} />
-            <Text style={styles.celebTitle}>SESSION COMPLETED & REPUTATION SEALED</Text>
-          </View>
-          <Text style={styles.celebDesc}>
-            All 4 disciplines completed. Progressive overload evaluated.
-          </Text>
-
-          {/* Overall Session Exertion Rating */}
-          <Text style={styles.rpeLabel}>RATE OVERALL SESSION EFFORT (1 TO 5):</Text>
-          <View style={styles.rpeRow}>
-            {[
-              { val: 1, label: 'Easy' },
-              { val: 2, label: 'Light' },
-              { val: 3, label: 'Optimal' },
-              { val: 4, label: 'Hard' },
-              { val: 5, label: 'Max' },
-            ].map(item => (
-              <TouchableOpacity
-                key={item.val}
-                style={[styles.rpeBtn, rpe === item.val && styles.rpeBtnActive]}
-                onPress={() => handleRpeSelect(item.val)}
-              >
-                <Text style={[styles.rpeDigit, rpe === item.val && styles.rpeDigitActive]}>
-                  {item.val}
-                </Text>
-                <Text style={[styles.rpeWord, rpe === item.val && styles.rpeWordActive]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Workout Observation Notes */}
-          <View style={styles.notesContainer}>
-            <View style={styles.notesHeaderRow}>
-              <Text style={styles.notesLabel}>SESSION OBSERVATIONS & ANKLE FEELING</Text>
-              {notes.trim().length > 0 && (
-                <TouchableOpacity
-                  onPress={() => {
-                    safeHaptics.light();
-                    setNotes('');
-                    if (onUpdateRpe) onUpdateRpe(rpe, '');
-                    setNotesSaved(true);
-                    setTimeout(() => setNotesSaved(false), 2000);
-                  }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={styles.clearNotesText}>Clear</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            <TextInput
-              style={styles.notesInput}
-              placeholder="How did your left ankle and endurance feel today? (Optional)"
-              placeholderTextColor={Colors.textMuted}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-              value={notes}
-              onChangeText={setNotes}
-              onBlur={handleSaveNotes}
-            />
-            <TouchableOpacity
-              style={[styles.saveNotesBtn, notesSaved && styles.saveNotesBtnSaved]}
-              onPress={handleSaveNotes}
-              activeOpacity={0.8}
-            >
-              <Ionicons 
-                name={notesSaved ? "checkmark-circle" : "save-outline"} 
-                size={14} 
-                color="#ffffff" 
-              />
-              <Text style={styles.saveNotesBtnText}>
-                {notesSaved ? 'Session Notes Saved ✓' : 'Save Session Notes'}
-              </Text>
+      {/* Movement Reflection Notes */}
+      <View style={styles.notesSection}>
+        <View style={styles.notesHeaderRow}>
+          <Text style={styles.notesLabel}>MOVEMENT & ANKLE REFLECTION</Text>
+          {notes.length > 0 && (
+            <TouchableOpacity onPress={() => setNotes('')}>
+              <Text style={styles.clearNotesText}>Clear</Text>
             </TouchableOpacity>
-          </View>
+          )}
         </View>
-      )}
+
+        <TextInput
+          style={styles.notesInput}
+          value={notes}
+          onChangeText={setNotes}
+          placeholder="Ankle stability, knee tracking, breathing cadence, energy..."
+          placeholderTextColor={Colors.textMuted}
+          multiline
+        />
+
+        <TouchableOpacity 
+          style={[styles.saveNotesBtn, notesSaved && styles.saveNotesBtnSaved]}
+          onPress={handleSaveNotes}
+          activeOpacity={0.8}
+        >
+          <Ionicons 
+            name={notesSaved ? "checkmark-circle" : "save-outline"} 
+            size={14} 
+            color="#ffffff" 
+          />
+          <Text style={styles.saveNotesBtnText}>
+            {notesSaved ? 'Notes Saved!' : 'Save Session Notes'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -439,12 +487,12 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.xl,
+    borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginBottom: Spacing.md,
-    ...Shadows.card,
+    marginBottom: Spacing.lg,
+    ...Shadows.soft,
   },
   headerRow: {
     flexDirection: 'row',
@@ -456,415 +504,435 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+    flex: 1,
   },
   iconBox: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: BorderRadius.md,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   cardTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.textPrimary,
     letterSpacing: 0.5,
   },
   cardSubtitle: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 1,
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textMuted,
+    marginTop: 2,
   },
   completedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: Colors.primaryMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
     borderWidth: 1,
     borderColor: Colors.primaryBorder,
   },
   completedText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.primary,
   },
   progressCounter: {
     fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textSecondary,
+    fontWeight: '700',
+    color: Colors.textMuted,
   },
-  overloadBanner: {
+
+  // Mode Switcher
+  modeSwitcherContainer: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: BorderRadius.md,
+    padding: 3,
+    marginBottom: Spacing.md,
+    gap: 4,
+  },
+  modePill: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: Colors.honey,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.lg,
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.honeyBorder,
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.sm,
   },
-  overloadTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.honeyDark,
-    letterSpacing: 0.5,
+  modePillActive: {
+    backgroundColor: Colors.primary,
+    ...Shadows.soft,
   },
-  overloadDesc: {
-    fontSize: 12,
-    color: Colors.textPrimary,
-    marginTop: 2,
-    lineHeight: 16,
+  modePillFloorActive: {
+    backgroundColor: Colors.mintDark,
+    ...Shadows.soft,
   },
-  overloadBtn: {
-    backgroundColor: Colors.honeyDark,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: BorderRadius.full,
-  },
-  overloadBtnText: {
+  modePillText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#ffffff',
+    color: Colors.textMuted,
   },
+  modePillTextActive: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
+
+  // Toolbar
+  toolbarContainer: {
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  weekTierRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  weightsVariantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: Spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  toolbarLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.textMuted,
+    letterSpacing: 0.5,
+  },
+  tierPillsWrap: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  tierPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  tierPillActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  tierPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+  },
+  tierPillTextActive: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
+  weightsPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  weightsPillActive: {
+    backgroundColor: Colors.honeyDark,
+    borderColor: Colors.honeyDark,
+  },
+  weightsPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+  },
+  weightsPillTextActive: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
+
+  // Rest Timer Banner
   restTimerBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.cyanMuted,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    backgroundColor: Colors.primaryMuted,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.md,
     marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.primaryBorder,
   },
   restTimerText: {
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '600',
     color: Colors.textPrimary,
   },
   timerBold: {
     fontWeight: '800',
-    color: Colors.cyan,
+    color: Colors.primary,
   },
   skipRestBtn: {
-    backgroundColor: Colors.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.sm,
-  },
-  skipRestText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.cyan,
-  },
-  exerciseList: {
-    gap: Spacing.md,
-    marginBottom: Spacing.lg,
-  },
-  exerciseBlock: {
-    backgroundColor: Colors.surfaceHighlight,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-  },
-  exerciseRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  exerciseInfo: {
-    flex: 1,
-  },
-  titleWithGuide: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  exerciseName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  infoBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.primaryMuted,
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.full,
+    paddingVertical: 2,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.sm,
     borderWidth: 1,
     borderColor: Colors.primaryBorder,
   },
-  infoBadgeActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  infoText: {
+  skipRestText: {
     fontSize: 11,
     fontWeight: '700',
     color: Colors.primary,
   },
-  infoTextActive: {
-    color: '#ffffff',
+
+  // Phases Deck
+  phasesDeck: {
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
   },
-  targetLabel: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  setButtonGroup: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  setButton: {
-    width: 36,
-    height: 36,
+  phaseCard: {
+    backgroundColor: Colors.surfaceElevated,
     borderRadius: BorderRadius.md,
-    backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  setButtonDone: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  setButtonText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-  },
-  setButtonTextDone: {
-    color: '#ffffff',
-  },
-  perExerciseDiffRow: {
-    marginTop: 10,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  perExerciseDiffLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Colors.textMuted,
-    letterSpacing: 0.5,
-  },
-  diffPillsWrap: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  diffPill: {
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.sm,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-  },
-  diffPillActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  diffPillText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-  },
-  diffPillTextActive: {
-    color: '#ffffff',
-  },
-  expandableGuideCard: {
-    marginTop: 12,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.md,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
   },
-  videoPlayerWrapper: {
-    width: '100%',
-    height: 200,
-    backgroundColor: '#000000',
-  },
-  webView: {
-    flex: 1,
-  },
-  guideContentSection: {
-    padding: Spacing.md,
-  },
-  tempoRow: {
+  phaseHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
+    padding: Spacing.md,
   },
-  guideBadge: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.primary,
-    backgroundColor: Colors.primaryMuted,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.full,
-  },
-  guideTempoText: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-  },
-  guideSectionTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Colors.textMuted,
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  cueRow: {
+  phaseHeaderLeft: {
     flexDirection: 'row',
-    gap: 6,
-    marginBottom: 4,
-  },
-  cueText: {
+    alignItems: 'center',
+    gap: Spacing.sm,
     flex: 1,
+  },
+  phaseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.textMuted,
+  },
+  phaseDotDone: {
+    backgroundColor: Colors.mintDark,
+  },
+  phaseTitle: {
     fontSize: 12,
-    color: Colors.textPrimary,
-    lineHeight: 16,
-  },
-  kaizenTipBox: {
-    flexDirection: 'row',
-    gap: 8,
-    backgroundColor: Colors.honey,
-    padding: 10,
-    borderRadius: BorderRadius.sm,
-    marginTop: 10,
-  },
-  kaizenTipText: {
-    flex: 1,
-    fontSize: 11,
-    color: Colors.honeyDark,
-    lineHeight: 15,
-  },
-  prehabContainer: {
-    backgroundColor: Colors.surfaceHighlight,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-  },
-  prehabHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  prehabTitle: {
-    fontSize: 11,
     fontWeight: '800',
-    color: Colors.primary,
-    letterSpacing: 0.5,
-  },
-  prehabButtonsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  prehabPill: {
-    backgroundColor: Colors.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  prehabPillActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  prehabPillText: {
-    fontSize: 11,
-    fontWeight: '600',
     color: Colors.textPrimary,
   },
-  prehabPillTextActive: {
-    color: '#ffffff',
+  phaseDuration: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: Colors.textMuted,
   },
-  celebrationCard: {
-    marginTop: Spacing.md,
-    backgroundColor: Colors.mint,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.mintBorder,
-  },
-  celebHeader: {
+  phaseHeaderRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
+    gap: Spacing.sm,
   },
-  celebTitle: {
-    fontSize: 11,
+  phaseDoneBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: Colors.mint,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+  },
+  phaseDoneText: {
+    fontSize: 10,
     fontWeight: '800',
     color: Colors.mintDark,
-    letterSpacing: 0.5,
   },
-  celebDesc: {
+  phaseCounterText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.textMuted,
+  },
+
+  // Phase Body & Exercises
+  phaseBody: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.md,
+    gap: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  exerciseItem: {
+    paddingVertical: Spacing.xs,
+  },
+  exerciseMainRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  exerciseTextWrap: {
+    flex: 1,
+    paddingRight: Spacing.sm,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  exerciseNameText: {
     fontSize: 12,
-    color: Colors.textSecondary,
-    marginBottom: 10,
+    fontWeight: '700',
+    color: Colors.textPrimary,
   },
-  rpeLabel: {
+  exerciseNameTextDone: {
+    color: Colors.mintDark,
+    textDecorationLine: 'line-through',
+  },
+  unlockBadge: {
+    backgroundColor: Colors.lavender,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 3,
+  },
+  unlockBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.lavenderDark,
+  },
+  guideMiniBtn: {
+    padding: 2,
+  },
+  targetDescText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textMuted,
+    marginTop: 1,
+  },
+  cautionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.amberMuted,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 3,
+  },
+  cautionText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.amber,
+  },
+
+  // Set Buttons
+  setButtonGroup: {
+    flexDirection: 'row',
+    gap: 5,
+  },
+  setBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setBtnDone: {
+    backgroundColor: Colors.mintDark,
+    borderColor: Colors.mintDark,
+  },
+  setBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.textSecondary,
+  },
+  setBtnTextDone: {
+    color: '#ffffff',
+  },
+
+  // Guide Detail Box
+  guideDetailBox: {
+    backgroundColor: Colors.surface,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    marginTop: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    gap: 2,
+  },
+  guideMuscles: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.primary,
+    marginBottom: 2,
+  },
+  guideCue: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    lineHeight: 14,
+  },
+  guideKaizen: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.honeyDark,
+    marginTop: 2,
+  },
+
+  // RPE Section
+  rpeSection: {
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  rpeSectionTitle: {
     fontSize: 10,
     fontWeight: '800',
     color: Colors.textMuted,
     letterSpacing: 0.5,
     marginBottom: 6,
   },
-  rpeRow: {
+  rpePillsWrap: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
-    marginBottom: 10,
   },
-  rpeBtn: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
+  rpePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.surfaceElevated,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  rpeBtnActive: {
+  rpePillActive: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
-  rpeDigit: {
-    fontSize: 14,
+  rpePillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+  },
+  rpePillTextActive: {
+    color: '#ffffff',
     fontWeight: '800',
-    color: Colors.textPrimary,
   },
-  rpeDigitActive: {
-    color: '#ffffff',
-  },
-  rpeWord: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: Colors.textMuted,
-  },
-  rpeWordActive: {
-    color: '#ffffff',
-  },
-  notesContainer: {
-    marginTop: 4,
+
+  // Notes Section
+  notesSection: {
+    marginTop: Spacing.md,
     gap: 6,
   },
   notesHeaderRow: {
@@ -884,14 +952,14 @@ const styles = StyleSheet.create({
     color: Colors.ruby,
   },
   notesInput: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.surfaceElevated,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     fontSize: 12,
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
-    minHeight: 64,
+    minHeight: 56,
   },
   saveNotesBtn: {
     flexDirection: 'row',
@@ -899,23 +967,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     backgroundColor: Colors.primary,
-    paddingVertical: 10,
+    paddingVertical: 9,
     borderRadius: BorderRadius.md,
-    marginTop: 2,
     ...Shadows.soft,
   },
   saveNotesBtnSaved: {
-    backgroundColor: Colors.emerald,
+    backgroundColor: Colors.mintDark,
   },
   saveNotesBtnText: {
     fontSize: 12,
     fontWeight: '800',
     color: '#ffffff',
-  },
-  notesSavedNotice: {
-    fontSize: 11,
-    color: Colors.primary,
-    marginTop: 4,
-    fontWeight: '600',
   },
 });

@@ -15,7 +15,16 @@ import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from './src/theme/colors';
 import { Typography } from './src/theme/typography';
-import { SelfAppState, DayPhase, AppSettings, ActiveFocusSession } from './src/types';
+import { 
+  SelfAppState, 
+  DayPhase, 
+  AppSettings, 
+  ActiveFocusSession, 
+  TrainingWeekTier, 
+  WeightsVariant, 
+  RoutineMode, 
+  CovenantTask 
+} from './src/types';
 import { 
   storage, 
   getCurrentDayPhase,
@@ -41,6 +50,7 @@ import { StatsDashboard } from './src/components/StatsDashboard';
 import { GymWorkoutCard } from './src/components/GymWorkoutCard';
 import { SettingsModal } from './src/components/SettingsModal';
 import { ScholarshipOutreachModal } from './src/components/ScholarshipOutreachModal';
+import { MeditationModal } from './src/components/MeditationModal';
 import { ExerciseGuide } from './src/services/exerciseData';
 import { safeHaptics } from './src/services/haptics';
 
@@ -93,6 +103,7 @@ export default function App() {
   const [showRelapseModal, setShowRelapseModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showScholarshipModal, setShowScholarshipModal] = useState(false);
+  const [showMeditationModal, setShowMeditationModal] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState<ExerciseGuide | null>(null);
   const [activeMealModal, setActiveMealModal] = useState<{
     meal: 'Breakfast' | 'Lunch' | 'Dinner';
@@ -188,6 +199,70 @@ export default function App() {
 
   const handleAcceptOverload = async () => {
     const updated = await storage.acceptOverloadSuggestion();
+    setAppState({ ...updated });
+  };
+
+  const handleTogglePhaseSet = async (phaseIndex: number, exerciseIndex: number, setIndex: number) => {
+    const updated = await storage.togglePhasedWorkoutSet(phaseIndex, exerciseIndex, setIndex);
+    setAppState({ ...updated });
+  };
+
+  const handleChangeRoutineMode = async (mode: RoutineMode) => {
+    const updated = await storage.updateTrainingSettings(undefined, undefined, mode);
+    setAppState({ ...updated });
+  };
+
+  const handleChangeTrainingWeekTier = async (tier: TrainingWeekTier) => {
+    const updated = await storage.updateTrainingSettings(tier, undefined, undefined);
+    setAppState({ ...updated });
+  };
+
+  const handleChangeWeightsVariant = async (variant: WeightsVariant) => {
+    const updated = await storage.updateTrainingSettings(undefined, variant, undefined);
+    setAppState({ ...updated });
+  };
+
+  const handleUpdateTrainingSettings = async (
+    tier: TrainingWeekTier,
+    weightsVariant: 'AUTO' | 'WORKOUT_A' | 'WORKOUT_B',
+    mode: RoutineMode
+  ) => {
+    const updated = await storage.updateTrainingSettings(tier, weightsVariant, mode);
+    setAppState({ ...updated });
+  };
+
+  const handleSaveMeditation = async (minutes: number) => {
+    const updated = await storage.saveMeditationSession(minutes);
+    setAppState({ ...updated });
+  };
+
+  const handleAcceptMeditationKaizen = async () => {
+    const updated = await storage.acceptMeditationKaizen();
+    setAppState({ ...updated });
+  };
+
+  const handleDismissMeditationKaizen = async () => {
+    const updated = await storage.dismissMeditationKaizen();
+    setAppState({ ...updated });
+  };
+
+  const handleToggleDisappear = async (reflection?: string) => {
+    const updated = await storage.toggleDisappearChallenge(reflection);
+    setAppState({ ...updated });
+  };
+
+  const handleToggleCovenantTask = async (taskId: string) => {
+    const updated = await storage.toggleCovenantTask(taskId);
+    setAppState({ ...updated });
+  };
+
+  const handleAddCustomTask = async (task: CovenantTask) => {
+    const updated = await storage.addCustomCovenantTask(task);
+    setAppState({ ...updated });
+  };
+
+  const handleDeleteCustomTask = async (taskId: string) => {
+    const updated = await storage.deleteCustomCovenantTask(taskId);
     setAppState({ ...updated });
   };
 
@@ -318,19 +393,37 @@ export default function App() {
 
   // Executive Daily & Weekly Calculations
   const totalFocusMinutesToday = appState.focusBlocks.reduce((acc, b) => acc + b.durationMinutes, 0);
-  const setsDoneCount = appState.workout.exercises.reduce((acc, ex) => acc + ex.completedSets.filter(s => s > 0).length, 0);
-  const totalSetsTarget = appState.workout.exercises.length * 3;
+
+  // Phased Routine & Calisthenics Calculations
+  const phases = appState.activeWorkoutPhases || [];
+  const totalPhasedSets = phases.reduce(
+    (acc, phase) => acc + phase.exercises.reduce((exAcc, ex) => exAcc + ex.setsTarget, 0),
+    0
+  );
+  const phasedSetsDone = phases.reduce(
+    (acc, phase) => acc + phase.exercises.reduce((exAcc, ex) => exAcc + ex.completedSets.filter(Boolean).length, 0),
+    0
+  );
+
+  const setsDoneCount = totalPhasedSets > 0 
+    ? phasedSetsDone 
+    : appState.workout.exercises.reduce((acc, ex) => acc + ex.completedSets.filter(s => s > 0).length, 0);
+  const totalSetsTarget = totalPhasedSets > 0 
+    ? totalPhasedSets 
+    : (appState.workout.exercises.length * 3 || 12);
   const waterPercent = Math.min(Math.round((appState.integrity.waterMl / appState.integrity.waterGoalMl) * 100), 100);
 
   // Movement Covenant Evaluation:
-  // On Run Days: Run logged AND Calisthenics (12 sets or completed) sealed
-  // On Non-Run Days: Gym logged OR Calisthenics (12 sets or completed) sealed
+  // On Run Days: Run logged AND Routine (completed or >= 70% sets) sealed
+  // On Non-Run Days: Gym logged OR Routine (completed or >= 70% sets) sealed
   const isRunLogged = Boolean(appState.workout.runLog);
   const isGymLogged = Boolean(appState.workout.gymLog);
-  const isCalisthenicsDone = setsDoneCount >= 12 || appState.workout.completed;
+  const isRoutineDone = totalPhasedSets > 0 
+    ? (phasedSetsDone >= Math.max(1, Math.floor(totalPhasedSets * 0.7)) || Boolean(appState.workout.completed))
+    : (setsDoneCount >= 12 || Boolean(appState.workout.completed));
   const isMovementCovenantDone = isRunningDay
-    ? (isRunLogged && isCalisthenicsDone)
-    : (isGymLogged || isCalisthenicsDone);
+    ? (isRunLogged && isRoutineDone)
+    : (isGymLogged || isRoutineDone);
 
   const lastGymLog = (() => {
     const history = appState.dailyHistory || {};
@@ -341,109 +434,167 @@ export default function App() {
     return null;
   })();
 
-  // Today's Checklist & Covenant Calculations
-  const todayChecklistItems: ChecklistItem[] = [
-    {
-      id: 'wakeup',
-      title: 'Morning Prayer & Dedication',
-      subtitle: appState.spiritual.wakeupPrayerDone ? 'Completed at 05:30 • Grounded' : 'Morning waking dedication',
-      domain: 'spirit_intellect',
-      category: 'spiritual',
-      isCompleted: appState.spiritual.wakeupPrayerDone,
-      onToggle: () => handleToggleSpiritual('wakeup'),
-    },
-    {
-      id: 'track_prayer',
-      title: '15m Track Walking Prayer',
-      subtitle: appState.spiritual.trackPrayerDone ? '15m completed round tracks' : 'Walking prayer round tracks',
-      domain: 'spirit_intellect',
-      category: 'spiritual',
-      isCompleted: appState.spiritual.trackPrayerDone,
-      onToggle: () => handleToggleSpiritual('track'),
-    },
-    {
-      id: 'bible',
-      title: 'Scripture Reading',
-      subtitle: appState.spiritual.bibleReadingDone ? 'Completed • Spiritual nourishment' : 'Proverbs / Daily passage',
-      domain: 'spirit_intellect',
-      category: 'spiritual',
-      isCompleted: appState.spiritual.bibleReadingDone,
-      onToggle: () => handleToggleSpiritual('bible'),
-    },
-    {
-      id: 'audiobook',
-      title: 'Daily Audiobook Summary',
-      subtitle: appState.spiritual.audiobookDone ? 'Completed • Strategic & intellectual fuel' : 'Listen to at least 1 book summary (15m)',
-      domain: 'spirit_intellect',
-      category: 'mind',
-      isCompleted: Boolean(appState.spiritual.audiobookDone),
-      onToggle: () => handleToggleSpiritual('audiobook'),
-    },
-    {
-      id: 'scholarship_outreach',
-      title: '1 Scholarship Cold Email',
-      subtitle: appState.scholarshipOutreachDone
-        ? 'Completed • Professor contacted for Masters/PhD'
-        : 'Send 1 cold email to professor (Masters/PhD)',
-      domain: 'spirit_intellect',
-      category: 'outreach',
-      isCompleted: Boolean(appState.scholarshipOutreachDone),
-      onToggle: () => handleToggleScholarshipOutreach(),
-    },
-    {
-      id: 'movement',
-      title: isRunningDay 
-        ? '2.5km Run & Calisthenics' 
-        : (appState.settings?.nonRunDayPreference === 'gym' ? 'Gym Strength Session' : 'Gym Strength or Calisthenics'),
-      subtitle: isMovementCovenantDone
-        ? (isRunningDay
-            ? (isGymLogged ? 'Conquered • 2.5km Run + Calisthenics + Gym' : 'Conquered • 2.5km Run & 12 Sets sealed')
-            : (isGymLogged ? `Conquered • ${appState.workout.gymLog?.split || 'Gym'} (${appState.workout.gymLog?.durationMinutes || 45}m)` : 'Conquered • 12/12 Calisthenics Sets sealed'))
-        : (isRunningDay
-            ? (isRunLogged ? 'Run logged • 12 Calisthenics sets remaining' : '2.5km Run & 12 Calisthenics sets')
-            : 'Log Gym session or complete 12 Calisthenics sets'),
-      domain: 'physical_sovereignty',
-      category: 'movement',
-      isCompleted: isMovementCovenantDone,
-      onToggle: () => setActiveNavTab('movement'),
-    },
-    {
-      id: 'satiety',
-      title: 'Mindful Satiety (Hara Hachi Bu)',
-      subtitle: appState.integrity.fullnessLogs.length > 0 ? `${appState.integrity.fullnessLogs.length} meal(s) audited` : 'Stop at 80% fullness',
-      domain: 'physical_sovereignty',
-      category: 'nutrition',
-      isCompleted: appState.integrity.fullnessLogs.length >= 2,
-      onToggle: () => setActiveMealModal({ meal: 'Lunch', rating: 3 }),
-    },
-    {
-      id: 'focus',
-      title: '90m Deep Work Session',
-      subtitle: totalFocusMinutesToday > 0 ? `${totalFocusMinutesToday} mins recorded` : 'Quant Bot / Multivariable Calc',
-      domain: 'craft_sanctuary',
-      category: 'focus',
-      isCompleted: totalFocusMinutesToday >= 90,
-      onToggle: () => setActiveNavTab('focus'),
-    },
-    {
-      id: 'guitar',
-      title: '15m Acoustic Guitar Anchor',
-      subtitle: appState.sanctuary.guitarMinutesToday >= 15 ? `${appState.sanctuary.guitarMinutesToday}m logged • Decompressed` : 'Non-screen tactile acoustic play',
-      domain: 'craft_sanctuary',
-      category: 'creative',
-      isCompleted: appState.sanctuary.guitarMinutesToday >= 15,
-      onToggle: () => handleLogGuitar(15),
-    },
-    {
-      id: 'journal',
-      title: 'Evening Micro-Reflection',
-      subtitle: appState.sanctuary.microJournalWins ? 'Wins & friction sealed' : '60s wins, friction & tomorrow anchor',
-      domain: 'craft_sanctuary',
-      category: 'spiritual',
-      isCompleted: Boolean(appState.sanctuary.microJournalWins),
-      onToggle: () => setActiveNavTab('today'),
-    },
-  ];
+  // Today's Checklist & Dynamic Subdomain Covenant Mapping
+  const decoupledTasks = appState.settings?.decoupledTasks || [];
+  const activeDailyTasks = decoupledTasks.filter(t => t.cadence === 'DAILY' && t.isEnabled !== false);
+
+  const todayChecklistItems: ChecklistItem[] = activeDailyTasks.map(task => {
+    switch (task.id) {
+      case 'wakeup':
+        return {
+          id: 'wakeup',
+          title: task.title,
+          subtitle: appState.spiritual.wakeupPrayerDone ? 'Completed at 05:30 • Grounded' : 'Morning waking dedication',
+          domain: task.domain,
+          subdomain: task.subdomain,
+          category: 'spiritual',
+          isCompleted: appState.spiritual.wakeupPrayerDone,
+          onToggle: () => handleToggleSpiritual('wakeup'),
+        };
+      case 'track_prayer':
+        return {
+          id: 'track_prayer',
+          title: task.title,
+          subtitle: appState.spiritual.trackPrayerDone ? '15m completed round tracks' : 'Walking prayer round tracks',
+          domain: task.domain,
+          subdomain: task.subdomain,
+          category: 'spiritual',
+          isCompleted: appState.spiritual.trackPrayerDone,
+          onToggle: () => handleToggleSpiritual('track'),
+        };
+      case 'bible':
+        return {
+          id: 'bible',
+          title: task.title,
+          subtitle: appState.spiritual.bibleReadingDone ? 'Completed • Spiritual nourishment' : 'Proverbs / Daily passage',
+          domain: task.domain,
+          subdomain: task.subdomain,
+          category: 'spiritual',
+          isCompleted: appState.spiritual.bibleReadingDone,
+          onToggle: () => handleToggleSpiritual('bible'),
+        };
+      case 'meditation':
+        return {
+          id: 'meditation',
+          title: task.title,
+          subtitle: appState.meditation?.completedToday 
+            ? `Completed ${appState.meditation.todayMinutesLogged}m • Mind Still` 
+            : `Target: ${appState.meditation?.targetMinutes || 10}m daily stillness`,
+          domain: task.domain,
+          subdomain: task.subdomain,
+          category: 'stillness',
+          isCompleted: Boolean(appState.meditation?.completedToday),
+          onToggle: () => setShowMeditationModal(true),
+        };
+      case 'audiobook':
+        return {
+          id: 'audiobook',
+          title: task.title,
+          subtitle: appState.spiritual.audiobookDone ? 'Completed • Strategic & intellectual fuel' : 'Listen to at least 1 book summary (15m)',
+          domain: task.domain,
+          subdomain: task.subdomain,
+          category: 'mind',
+          isCompleted: Boolean(appState.spiritual.audiobookDone),
+          onToggle: () => handleToggleSpiritual('audiobook'),
+        };
+      case 'scholarship_outreach':
+        return {
+          id: 'scholarship_outreach',
+          title: task.title,
+          subtitle: appState.scholarshipOutreachDone
+            ? 'Completed • Professor contacted for Masters/PhD'
+            : 'Send 1 cold email to professor (Masters/PhD)',
+          domain: task.domain,
+          subdomain: task.subdomain,
+          category: 'outreach',
+          isCompleted: Boolean(appState.scholarshipOutreachDone),
+          onToggle: () => handleToggleScholarshipOutreach(),
+        };
+      case 'movement':
+        return {
+          id: 'movement',
+          title: isRunningDay 
+            ? '2km Run & Kaizen Routine' 
+            : (appState.settings?.nonRunDayPreference === 'gym' ? 'Gym Strength Session' : '19-Movement Mobility & Prehab'),
+          subtitle: isMovementCovenantDone
+            ? (isRunningDay
+                ? (isGymLogged ? 'Conquered • 2km Run + Routine + Gym' : `Conquered • 2km Run & ${setsDoneCount}/${totalSetsTarget} Sets`)
+                : (isGymLogged ? `Conquered • ${appState.workout.gymLog?.split || 'Gym'}` : `Conquered • ${setsDoneCount}/${totalSetsTarget} Sets`))
+            : (isRunningDay
+                ? (isRunLogged ? `Run logged • ${setsDoneCount}/${totalSetsTarget} sets remaining` : `2km Run & ${totalSetsTarget} Sets`)
+                : (appState.settings?.nonRunDayPreference === 'gym' ? 'Log Gym session or complete mobility' : `Complete mobility flow (${setsDoneCount}/${totalSetsTarget})`)),
+          domain: task.domain,
+          subdomain: task.subdomain,
+          category: 'movement',
+          isCompleted: isMovementCovenantDone,
+          onToggle: () => setActiveNavTab('movement'),
+        };
+      case 'satiety':
+        return {
+          id: 'satiety',
+          title: task.title,
+          subtitle: appState.integrity.fullnessLogs.length > 0 ? `${appState.integrity.fullnessLogs.length} meal(s) audited` : 'Stop at 80% fullness',
+          domain: task.domain,
+          subdomain: task.subdomain,
+          category: 'nutrition',
+          isCompleted: appState.integrity.fullnessLogs.length >= 2,
+          onToggle: () => setActiveMealModal({ meal: 'Lunch', rating: 3 }),
+        };
+      case 'focus':
+        return {
+          id: 'focus',
+          title: task.title,
+          subtitle: totalFocusMinutesToday > 0 ? `${totalFocusMinutesToday} mins recorded` : 'Quant Bot / Multivariable Calc',
+          domain: task.domain,
+          subdomain: task.subdomain,
+          category: 'focus',
+          isCompleted: totalFocusMinutesToday >= 90,
+          onToggle: () => setActiveNavTab('focus'),
+        };
+      case 'guitar':
+        return {
+          id: 'guitar',
+          title: task.title,
+          subtitle: appState.sanctuary.guitarMinutesToday >= 15 ? `${appState.sanctuary.guitarMinutesToday}m logged • Decompressed` : 'Non-screen tactile acoustic play',
+          domain: task.domain,
+          subdomain: task.subdomain,
+          category: 'creative',
+          isCompleted: appState.sanctuary.guitarMinutesToday >= 15,
+          onToggle: () => handleLogGuitar(15),
+        };
+      case 'journal':
+        return {
+          id: 'journal',
+          title: task.title,
+          subtitle: appState.sanctuary.microJournalWins ? 'Wins & friction sealed' : '60s wins, friction & tomorrow anchor',
+          domain: task.domain,
+          subdomain: task.subdomain,
+          category: 'spiritual',
+          isCompleted: Boolean(appState.sanctuary.microJournalWins),
+          onToggle: () => setActiveNavTab('today'),
+        };
+      default: {
+        const isCustomDone = Boolean(task.completedDates?.includes(appState.currentDate));
+        const catMap: Record<string, ChecklistItem['category']> = {
+          spirit_intellect: 'spiritual',
+          physical_sovereignty: 'movement',
+          craft_sanctuary: 'focus',
+        };
+        return {
+          id: task.id,
+          title: task.title,
+          subtitle: isCustomDone 
+            ? 'Completed today • Sovereign seal' 
+            : `Subdomain: ${task.subdomain.replace(/_/g, ' ')}`,
+          domain: task.domain,
+          subdomain: task.subdomain,
+          category: catMap[task.domain] || 'spiritual',
+          isCompleted: isCustomDone,
+          onToggle: () => handleToggleCovenantTask(task.id),
+        };
+      }
+    }
+  });
 
   const completedCovenantCount = todayChecklistItems.filter(i => i.isCompleted).length;
   const totalCovenantCount = todayChecklistItems.length;
@@ -590,7 +741,11 @@ export default function App() {
                 />
 
                 {/* TODAY'S CHECKLIST (IMAGE 3 INSPIRED) */}
-                <TodayChecklist items={todayChecklistItems} />
+                <TodayChecklist 
+                  items={todayChecklistItems}
+                  disappearChallenge={appState.disappearChallenge}
+                  onToggleDisappear={handleToggleDisappear}
+                />
 
                 {/* UNIFIED TACTILE QUICK ACTION DOCK */}
                 <View style={styles.dockWrapper}>
@@ -640,7 +795,7 @@ export default function App() {
             )}
 
             {/* ======================================================== */}
-            {/* TAB 2: MOVEMENT (2.5KM RUN & KAIZEN OVERLOAD ENGINE)     */}
+            {/* TAB 2: MOVEMENT (2KM RUN & PHASED PROTOCOL ENGINE)       */}
             {/* ======================================================== */}
             {activeNavTab === 'movement' && (
               <View style={styles.screenContainer}>
@@ -650,10 +805,10 @@ export default function App() {
                     <Text style={styles.tabBannerTitle}>KAIZEN MOVEMENT</Text>
                     <Text style={styles.tabBannerSubtitle}>
                       {isRunningDay 
-                        ? 'Run Day: 2.5km Aerobic Base + Calisthenics' 
+                        ? 'Run Day: 2km Easy Aerobic Base + Phased Protocol' 
                         : (appState.settings?.nonRunDayPreference === 'gym' 
                             ? 'Gym Day: Strength Training & Muscle Progression' 
-                            : 'Non-Run Day: Gym or Calisthenics & Ankle Prehab')}
+                            : 'Non-Run Day: 19-Movement Mobility & Prehab Flow')}
                     </Text>
                   </View>
                   <View style={styles.statusChip}>
@@ -661,50 +816,73 @@ export default function App() {
                   </View>
                 </View>
 
-                {/* Dynamic Movement Dock: Non-Run Day spotlights Gym first; Run Day spotlights Running first */}
+                {/* Dynamic Movement Dock: Non-Run Day spotlights Gym/Mobility; Run Day spotlights Running first */}
                 {!isRunningDay ? (
                   <>
-                    {/* Gym Workout Card (Hero Spotlight on Non-Run Day) */}
-                    <GymWorkoutCard
-                      gymLog={appState.workout.gymLog}
-                      lastGymLog={lastGymLog}
-                      onSaveGym={handleSaveGymLog}
-                    />
+                    {/* Gym Workout Card (Optional Spotlight on Non-Run Day) */}
+                    {appState.settings?.nonRunDayPreference === 'gym' && (
+                      <GymWorkoutCard
+                        gymLog={appState.workout.gymLog}
+                        lastGymLog={lastGymLog}
+                        onSaveGym={handleSaveGymLog}
+                      />
+                    )}
 
-                    {/* Calisthenics Progression Card */}
+                    {/* Phased Routine Deck */}
                     <WorkoutCard
                       workout={appState.workout}
                       overloadConfig={appState.overloadConfig}
-                      onToggleSet={handleToggleSet}
+                      phases={appState.activeWorkoutPhases}
+                      trainingWeekTier={appState.settings?.trainingWeekTier}
+                      weightsVariant={appState.settings?.weightsVariantPreference}
+                      routineMode={appState.settings?.routineModePreference}
+                      onTogglePhaseSet={handleTogglePhaseSet}
+                      onChangeRoutineMode={handleChangeRoutineMode}
+                      onChangeTrainingWeekTier={handleChangeTrainingWeekTier}
+                      onChangeWeightsVariant={handleChangeWeightsVariant}
                       onAcceptOverload={handleAcceptOverload}
                       onUpdateRpe={handleUpdateWorkoutRpe}
-                      onUpdateExerciseDifficulty={handleUpdateExerciseDifficulty}
                     />
 
                     {/* Running Tracker Card */}
                     <RunningCard
                       runLog={appState.workout.runLog}
-                      defaultDistance={2.5}
+                      defaultDistance={2.0}
                       onSaveRun={handleSaveRun}
                     />
+
+                    {/* Gym Workout Card if not default */}
+                    {appState.settings?.nonRunDayPreference !== 'gym' && (
+                      <GymWorkoutCard
+                        gymLog={appState.workout.gymLog}
+                        lastGymLog={lastGymLog}
+                        onSaveGym={handleSaveGymLog}
+                      />
+                    )}
                   </>
                 ) : (
                   <>
                     {/* Running Tracker Card (Hero Spotlight on Run Day) */}
                     <RunningCard
                       runLog={appState.workout.runLog}
-                      defaultDistance={2.5}
+                      defaultDistance={2.0}
                       onSaveRun={handleSaveRun}
                     />
 
-                    {/* Calisthenics Progression Card */}
+                    {/* Phased Routine Deck */}
                     <WorkoutCard
                       workout={appState.workout}
                       overloadConfig={appState.overloadConfig}
-                      onToggleSet={handleToggleSet}
+                      phases={appState.activeWorkoutPhases}
+                      trainingWeekTier={appState.settings?.trainingWeekTier}
+                      weightsVariant={appState.settings?.weightsVariantPreference}
+                      routineMode={appState.settings?.routineModePreference}
+                      onTogglePhaseSet={handleTogglePhaseSet}
+                      onChangeRoutineMode={handleChangeRoutineMode}
+                      onChangeTrainingWeekTier={handleChangeTrainingWeekTier}
+                      onChangeWeightsVariant={handleChangeWeightsVariant}
                       onAcceptOverload={handleAcceptOverload}
                       onUpdateRpe={handleUpdateWorkoutRpe}
-                      onUpdateExerciseDifficulty={handleUpdateExerciseDifficulty}
                     />
 
                     {/* Gym Workout Card (Bonus / Dual Session on Run Day) */}
@@ -877,7 +1055,22 @@ export default function App() {
           overloadConfig={appState.overloadConfig}
           onSaveSettings={handleSaveSettings}
           onSaveKaizenTargets={handleSaveKaizenTargets}
+          onToggleCovenantTask={handleToggleCovenantTask}
+          onAddCustomTask={handleAddCustomTask}
+          onDeleteCustomTask={handleDeleteCustomTask}
+          onUpdateTrainingSettings={handleUpdateTrainingSettings}
         />
+
+        {appState.meditation && (
+          <MeditationModal
+            visible={showMeditationModal}
+            onClose={() => setShowMeditationModal(false)}
+            meditationState={appState.meditation}
+            onSaveSession={handleSaveMeditation}
+            onAcceptKaizen={handleAcceptMeditationKaizen}
+            onDismissKaizen={handleDismissMeditationKaizen}
+          />
+        )}
 
         <ScholarshipOutreachModal
           visible={showScholarshipModal}

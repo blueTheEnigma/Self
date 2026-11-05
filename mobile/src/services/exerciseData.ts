@@ -225,5 +225,116 @@ export const EXERCISE_GUIDES: Record<string, ExerciseGuide> = {
       peakLabel: 'Forward Hip Hinge',
       tempo: 'Smooth Alternating Transitions'
     }
+  },
+
+  // --- Key New Protocol Moves ---
+  frogSquatRock: {
+    id: 'frogSquatRock',
+    name: 'Frog Squat Rock',
+    category: 'Mobility',
+    primaryMuscles: 'Adductors, Groin, Hip Capsule, Pelvic Floor',
+    cues: [
+      'Begin on all fours on a padded mat; slide knees as wide apart as comfortable.',
+      'Turn feet outward with inner arches resting on the floor.',
+      'Forearms rest flat on the floor with elbows under shoulders.',
+      'Inhale deeply; on the exhale, gently rock your hips straight back toward your heels.',
+      'Hold the back stretch for 3 full seconds, breathing into the groin.',
+      'Gently rock forward to release, then repeat for 8 slow repetitions.'
+    ],
+    mistakesToAvoid: [
+      'Hyperextending or overarching the lumbar spine.',
+      'Forcing the knees wider than hip tolerance allows.',
+      'Holding breath instead of exhaling into the back rock.'
+    ],
+    kaizenTip: 'This is the premier hip opener for runners. It decompresses pelvic tightness from running impacts.',
+    youtubeId: 'IODxDxX7oi4',
+    videoDemoUrl: 'https://www.youtube.com/embed/IODxDxX7oi4?playsinline=1&rel=0',
+    animationFrames: {
+      startLabel: 'Wide Knee Stance',
+      peakLabel: '3s Back Rock Hold',
+      tempo: '8 Slow Rocks with 3s Pause'
+    }
+  },
+
+  bearCrawl: {
+    id: 'bearCrawl',
+    name: 'Bear Crawl',
+    category: 'Calisthenics',
+    primaryMuscles: 'Serratus Anterior, Anterior Deltoids, Core, Quadriceps',
+    cues: [
+      'Start on all fours with hands under shoulders and knees directly under hips.',
+      'Tuck toes and hover knees just 1 to 2 inches off the ground—never let knees rise high.',
+      'Keep back flat and hips level like a table with a cup of water balancing on it.',
+      'Move opposite hand and foot forward simultaneously with short, deliberate steps.',
+      'Crawl slow and smooth for 10 metres, rest 60 seconds, then complete second set.'
+    ],
+    mistakesToAvoid: [
+      'Piking hips into the air (destroys core and shoulder loading).',
+      'Rushing forward with wild hip swaying.',
+      'Letting head drop toward floor.'
+    ],
+    kaizenTip: 'Loads the shoulders and serratus anterior while conditioning total-body cross-body coordination.',
+    youtubeId: 'IODxDxX7oi4',
+    videoDemoUrl: 'https://www.youtube.com/embed/IODxDxX7oi4?playsinline=1&rel=0',
+    animationFrames: {
+      startLabel: 'Knees 1" Above Floor',
+      peakLabel: 'Contralateral Step',
+      tempo: 'Deliberate Slow Crawl'
+    }
+  },
+
+  crabHold: {
+    id: 'crabHold',
+    name: 'Crab Hold',
+    category: 'Isometric Hold',
+    primaryMuscles: 'Posterior Deltoids, Lower Traps, Rhomboids, Glutes, Thoracic Spine',
+    cues: [
+      'Sit on the floor with knees bent, feet flat hip-width apart.',
+      'Place hands on floor behind hips, fingers pointing backwards or slightly outward.',
+      'Depress and retract shoulder blades, opening your chest proud.',
+      'Drive through heels and hands to lift hips until torso and thighs form a bridge.',
+      'Hold statically for 15 seconds, actively pushing floor away.',
+      'SAFETY CHECK: Skip immediately if left shoulder complains or pinches.'
+    ],
+    mistakesToAvoid: [
+      'Slumping shoulders toward ears (keep neck long).',
+      'Ignoring left shoulder discomfort—abort if pain is felt.',
+      'Sagging hips below knee level.'
+    ],
+    kaizenTip: 'Balances all the horizontal pushing from push-ups by loading posterior shoulder extension and opening the anterior chest.',
+    youtubeId: 'IODxDxX7oi4',
+    videoDemoUrl: 'https://www.youtube.com/embed/IODxDxX7oi4?playsinline=1&rel=0',
+    animationFrames: {
+      startLabel: 'Seated Hands Behind',
+      peakLabel: 'Hips Lifted, Chest Open',
+      tempo: '15s to 30s Static Tension'
+    }
+  },
+
+  toeSitKneel: {
+    id: 'toeSitKneel',
+    name: 'Toe Sit Kneel',
+    category: 'Mobility',
+    primaryMuscles: 'Plantar Fascia, Great Toe Flexors, Achilles Tendon',
+    cues: [
+      'Kneel on the floor with knees together and all 10 toes tucked completely underneath.',
+      'Ensure the little toes are tucked manually if needed.',
+      'Slowly sit your hips back onto your heels, keeping torso upright.',
+      'Breathe calmly through the intense stretch along the soles of the feet.',
+      'Start at 20 seconds and gradually build tolerance up to 60 seconds.'
+    ],
+    mistakesToAvoid: [
+      'Letting outer toes fold out or untuck.',
+      'Tensing shoulders and holding breath.',
+      'Bailing early—embrace the mild discomfort calmly.'
+    ],
+    kaizenTip: 'Essential prehab for runners that restores great toe dorsiflexion and prevents plantar fasciitis.',
+    youtubeId: 'IODxDxX7oi4',
+    videoDemoUrl: 'https://www.youtube.com/embed/IODxDxX7oi4?playsinline=1&rel=0',
+    animationFrames: {
+      startLabel: 'Toes Tucked Under',
+      peakLabel: 'Sitting on Heels',
+      tempo: '20s to 60s Still Hold'
+    }
   }
 };

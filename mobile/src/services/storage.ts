@@ -12,10 +12,157 @@ import {
   AppSettings,
   GymLog,
   ActiveFocusSession,
-  ScholarshipOutreachRecord
+  ScholarshipOutreachRecord,
+  CovenantTask,
+  TrainingWeekTier,
+  WeightsVariant,
+  RoutineMode,
+  WorkoutPhaseGroup,
+  MeditationState,
+  WeeklyDisappearChallenge
 } from '../types';
+import { buildRunDayPhases, buildNonRunDayPhases } from './workoutProtocol';
 
 const STORAGE_KEY = '@self_companion_state_v3';
+
+export const DEFAULT_DECOUPLED_TASKS: CovenantTask[] = [
+  {
+    id: 'wakeup',
+    title: 'Morning Prayer & Dedication',
+    subtitle: 'Morning waking dedication',
+    domain: 'spirit_intellect',
+    subdomain: 'morning_grounding',
+    category: 'spiritual',
+    isEnabled: true,
+    cadence: 'DAILY',
+  },
+  {
+    id: 'track_prayer',
+    title: '15m Track Walking Prayer',
+    subtitle: 'Walking prayer round tracks',
+    domain: 'spirit_intellect',
+    subdomain: 'movement_prayer',
+    category: 'spiritual',
+    isEnabled: true,
+    cadence: 'DAILY',
+    targetValue: 15,
+    unit: 'minutes',
+  },
+  {
+    id: 'bible',
+    title: 'Scripture Reading',
+    subtitle: 'Proverbs / Daily passage',
+    domain: 'spirit_intellect',
+    subdomain: 'scripture_study',
+    category: 'spiritual',
+    isEnabled: true,
+    cadence: 'DAILY',
+  },
+  {
+    id: 'audiobook',
+    title: 'Daily Audiobook Summary',
+    subtitle: 'Listen to at least 1 book summary (15m)',
+    domain: 'spirit_intellect',
+    subdomain: 'intellectual_growth',
+    category: 'mind',
+    isEnabled: true,
+    cadence: 'DAILY',
+    targetValue: 15,
+    unit: 'minutes',
+  },
+  {
+    id: 'scholarship_outreach',
+    title: '1 Scholarship Cold Email',
+    subtitle: 'Send 1 cold email to professor (Masters/PhD)',
+    domain: 'spirit_intellect',
+    subdomain: 'scholarship_outreach',
+    category: 'outreach',
+    isEnabled: true,
+    cadence: 'DAILY',
+    targetValue: 1,
+    unit: 'email',
+  },
+  {
+    id: 'meditation',
+    title: 'Daily Stillness & Meditation',
+    subtitle: 'Silent breath & stillness (+2m weekly at 5/7)',
+    domain: 'spirit_intellect',
+    subdomain: 'mindfulness_stillness',
+    category: 'stillness',
+    isEnabled: true,
+    cadence: 'DAILY',
+    targetValue: 10,
+    unit: 'minutes',
+  },
+  {
+    id: 'movement',
+    title: 'Kaizen Movement & Workout',
+    subtitle: 'Run + Circuit + Weights or Mobility Flow',
+    domain: 'physical_sovereignty',
+    subdomain: 'general_movement',
+    category: 'movement',
+    isEnabled: true,
+    cadence: 'DAILY',
+  },
+  {
+    id: 'satiety',
+    title: 'Mindful Satiety (Hara Hachi Bu)',
+    subtitle: 'Stop at 80% fullness across meals',
+    domain: 'physical_sovereignty',
+    subdomain: 'nutrition_satiety',
+    category: 'nutrition',
+    isEnabled: true,
+    cadence: 'DAILY',
+    targetValue: 2,
+    unit: 'meals',
+  },
+  {
+    id: 'focus',
+    title: '90m Deep Work Session',
+    subtitle: 'Quant Bot / Multivariable Calc compression',
+    domain: 'craft_sanctuary',
+    subdomain: 'deep_work_focus',
+    category: 'focus',
+    isEnabled: true,
+    cadence: 'DAILY',
+    targetValue: 90,
+    unit: 'minutes',
+  },
+  {
+    id: 'guitar',
+    title: '15m Acoustic Guitar Anchor',
+    subtitle: 'Non-screen tactile acoustic play',
+    domain: 'craft_sanctuary',
+    subdomain: 'acoustic_tactile',
+    category: 'creative',
+    isEnabled: true,
+    cadence: 'DAILY',
+    targetValue: 15,
+    unit: 'minutes',
+  },
+  {
+    id: 'journal',
+    title: 'Evening Micro-Reflection',
+    subtitle: '60s wins, friction & tomorrow anchor',
+    domain: 'craft_sanctuary',
+    subdomain: 'evening_reflection',
+    category: 'creative',
+    isEnabled: true,
+    cadence: 'DAILY',
+  },
+  {
+    id: 'disappear',
+    title: '3 Hours Disappear Challenge',
+    subtitle: 'Weekly offline deep sanctuary immersion',
+    domain: 'craft_sanctuary',
+    subdomain: 'weekly_sovereign_quest',
+    category: 'quest',
+    isEnabled: true,
+    cadence: 'WEEKLY_TARGET',
+    targetValue: 180,
+    unit: 'minutes',
+  },
+];
 
 export function getTodayDateString(): string {
   const d = new Date();
@@ -134,11 +281,29 @@ export function getInitialState(): SelfAppState {
     scholarshipOutreachDone: false,
     scholarshipOutreachNotes: '',
     scholarshipOutreachHistory: [],
+    meditation: {
+      targetMinutes: 10,
+      completedToday: false,
+      todayMinutesLogged: 0,
+      weeklyHistory: {},
+      qualifyingWeeksCount: 0
+    },
+    disappearChallenge: {
+      completedThisWeek: false,
+      durationMinutes: 180
+    },
+    activeWorkoutPhases: runDay 
+      ? buildRunDayPhases('WEEKS_1_2', 'WORKOUT_A', 'STANDARD')
+      : buildNonRunDayPhases('WEEKS_1_2', 'STANDARD'),
     settings: {
       runDays: [1, 3, 5],
       nonRunDayPreference: 'gym',
       waterGoalMl: 3000,
       deepWorkGoalMinutes: 90,
+      trainingWeekTier: 'WEEKS_1_2',
+      weightsVariantPreference: 'AUTO',
+      routineModePreference: 'STANDARD',
+      decoupledTasks: DEFAULT_DECOUPLED_TASKS,
       exerciseVariants: {
         pushupsName: 'Pushups',
         horseStanceName: 'Horse Stance',
@@ -277,6 +442,40 @@ class StorageService {
           parsed.sanctuary.microJournalWins = '';
           parsed.sanctuary.microJournalFriction = '';
           parsed.integrity.purityStreakDays += 1;
+
+          // Meditation rollover
+          if (!parsed.meditation) {
+            parsed.meditation = {
+              targetMinutes: 10,
+              completedToday: false,
+              todayMinutesLogged: 0,
+              weeklyHistory: {},
+              qualifyingWeeksCount: 0
+            };
+          } else {
+            parsed.meditation.completedToday = false;
+            parsed.meditation.todayMinutesLogged = 0;
+          }
+
+          // Disappear challenge weekly reset on Monday
+          if (!parsed.disappearChallenge) {
+            parsed.disappearChallenge = { completedThisWeek: false, durationMinutes: 180 };
+          } else if (new Date().getDay() === 1) {
+            parsed.disappearChallenge.completedThisWeek = false;
+            parsed.disappearChallenge.completedDate = undefined;
+            parsed.disappearChallenge.reflection = undefined;
+          }
+
+          // Phased workout initialization for new day
+          const tier = parsed.settings?.trainingWeekTier || 'WEEKS_1_2';
+          const weightsSplit = (parsed.settings?.weightsVariantPreference === 'WORKOUT_B') 
+            ? 'WORKOUT_B' 
+            : 'WORKOUT_A';
+          const mode = parsed.settings?.routineModePreference || 'STANDARD';
+          parsed.activeWorkoutPhases = parsed.workout.isRunDay 
+            ? buildRunDayPhases(tier, weightsSplit, mode)
+            : buildNonRunDayPhases(tier, mode);
+
           parsed.activeFocusSession = {
             startTime: null,
             targetMinutes: parsed.settings?.deepWorkGoalMinutes || 90,
@@ -334,8 +533,40 @@ class StorageService {
         if (parsed.scholarshipOutreachDone === undefined) {
           parsed.scholarshipOutreachDone = false;
         }
-        if (!parsed.settings) {
-          parsed.settings = getInitialState().settings;
+        const appSettings = parsed.settings || getInitialState().settings!;
+        parsed.settings = appSettings;
+
+        if (!parsed.meditation) {
+          parsed.meditation = {
+            targetMinutes: 10,
+            completedToday: false,
+            todayMinutesLogged: 0,
+            weeklyHistory: {},
+            qualifyingWeeksCount: 0
+          };
+        }
+        if (!parsed.disappearChallenge) {
+          parsed.disappearChallenge = { completedThisWeek: false, durationMinutes: 180 };
+        }
+        if (!appSettings.decoupledTasks || appSettings.decoupledTasks.length === 0) {
+          appSettings.decoupledTasks = DEFAULT_DECOUPLED_TASKS;
+        }
+        if (!appSettings.trainingWeekTier) {
+          appSettings.trainingWeekTier = 'WEEKS_1_2';
+        }
+        if (!appSettings.weightsVariantPreference) {
+          appSettings.weightsVariantPreference = 'AUTO';
+        }
+        if (!appSettings.routineModePreference) {
+          appSettings.routineModePreference = 'STANDARD';
+        }
+        if (!parsed.activeWorkoutPhases || parsed.activeWorkoutPhases.length === 0) {
+          const tier = appSettings.trainingWeekTier;
+          const weightsSplit = (appSettings.weightsVariantPreference === 'WORKOUT_B') ? 'WORKOUT_B' : 'WORKOUT_A';
+          const mode = appSettings.routineModePreference;
+          parsed.activeWorkoutPhases = parsed.workout.isRunDay 
+            ? buildRunDayPhases(tier, weightsSplit, mode)
+            : buildNonRunDayPhases(tier, mode);
         }
         if (!parsed.activeFocusSession) {
           parsed.activeFocusSession = getInitialState().activeFocusSession!;
@@ -864,6 +1095,172 @@ class StorageService {
     };
 
     state.bodyMetricsHistory.unshift(newLog);
+    await this.saveState(state);
+    return state;
+  }
+
+  // --- Meditation Action & Dynamic Kaizen Engine ---
+  async saveMeditationSession(minutes: number): Promise<SelfAppState> {
+    const state = await this.loadState();
+    const today = getTodayDateString();
+    state.meditation.completedToday = true;
+    state.meditation.todayMinutesLogged = (state.meditation.todayMinutesLogged || 0) + minutes;
+    state.meditation.weeklyHistory[today] = true;
+
+    // Check last 7 days completion rate
+    const past7Days: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const y = d.getFullYear();
+      const m = (d.getMonth() + 1).toString().padStart(2, '0');
+      const day = d.getDate().toString().padStart(2, '0');
+      past7Days.push(`${y}-${m}-${day}`);
+    }
+    const daysDone = past7Days.filter(dateStr => state.meditation.weeklyHistory[dateStr]).length;
+
+    // If completed 5 of 7 days, trigger Kaizen elevation suggestion (+2 mins)
+    if (daysDone >= 5 && !state.meditation.pendingKaizenElevation) {
+      state.meditation.pendingKaizenElevation = {
+        suggestedMinutes: state.meditation.targetMinutes + 2,
+        daysCompletedLastWeek: daysDone
+      };
+    }
+
+    await this.saveState(state);
+    return state;
+  }
+
+  async acceptMeditationKaizen(): Promise<SelfAppState> {
+    const state = await this.loadState();
+    if (state.meditation.pendingKaizenElevation) {
+      state.meditation.targetMinutes = state.meditation.pendingKaizenElevation.suggestedMinutes;
+      state.meditation.qualifyingWeeksCount = (state.meditation.qualifyingWeeksCount || 0) + 1;
+      state.meditation.pendingKaizenElevation = undefined;
+      await this.saveState(state);
+    }
+    return state;
+  }
+
+  async dismissMeditationKaizen(): Promise<SelfAppState> {
+    const state = await this.loadState();
+    state.meditation.pendingKaizenElevation = undefined;
+    await this.saveState(state);
+    return state;
+  }
+
+  // --- Weekly "3 Hours Disappear" Challenge ---
+  async toggleDisappearChallenge(reflection?: string): Promise<SelfAppState> {
+    const state = await this.loadState();
+    const current = Boolean(state.disappearChallenge?.completedThisWeek);
+    state.disappearChallenge = {
+      completedThisWeek: !current,
+      completedDate: !current ? getTodayDateString() : undefined,
+      durationMinutes: 180,
+      reflection: !current ? reflection : undefined
+    };
+    await this.saveState(state);
+    return state;
+  }
+
+  // --- Decoupled Covenant Task Management ---
+  async toggleCovenantTask(taskId: string): Promise<SelfAppState> {
+    const state = await this.loadState();
+    const settings = state.settings || getInitialState().settings!;
+    state.settings = settings;
+
+    if (!settings.decoupledTasks) {
+      settings.decoupledTasks = DEFAULT_DECOUPLED_TASKS;
+    }
+    settings.decoupledTasks = settings.decoupledTasks.map(t => 
+      t.id === taskId ? { ...t, isEnabled: !t.isEnabled } : t
+    );
+    await this.saveState(state);
+    return state;
+  }
+
+  async addCustomCovenantTask(task: CovenantTask): Promise<SelfAppState> {
+    const state = await this.loadState();
+    const settings = state.settings || getInitialState().settings!;
+    state.settings = settings;
+
+    if (!settings.decoupledTasks) {
+      settings.decoupledTasks = DEFAULT_DECOUPLED_TASKS;
+    }
+    settings.decoupledTasks.push(task);
+    await this.saveState(state);
+    return state;
+  }
+
+  async deleteCustomCovenantTask(taskId: string): Promise<SelfAppState> {
+    const state = await this.loadState();
+    if (state.settings?.decoupledTasks) {
+      state.settings.decoupledTasks = state.settings.decoupledTasks.filter(t => t.id !== taskId);
+      await this.saveState(state);
+    }
+    return state;
+  }
+
+  // --- Phased Workout Routine State Actions ---
+  async updateTrainingSettings(
+    tier?: TrainingWeekTier,
+    weightsVariant?: 'AUTO' | 'WORKOUT_A' | 'WORKOUT_B',
+    mode?: RoutineMode
+  ): Promise<SelfAppState> {
+    const state = await this.loadState();
+    const settings = state.settings || getInitialState().settings!;
+    state.settings = settings;
+
+    if (tier) settings.trainingWeekTier = tier;
+    if (weightsVariant) settings.weightsVariantPreference = weightsVariant;
+    if (mode) settings.routineModePreference = mode;
+
+    const currentTier = settings.trainingWeekTier || 'WEEKS_1_2';
+    const currentWeightsPref = settings.weightsVariantPreference || 'AUTO';
+    const currentMode = settings.routineModePreference || 'STANDARD';
+
+    const weightsSplit = currentWeightsPref === 'WORKOUT_B' ? 'WORKOUT_B' : 'WORKOUT_A';
+    state.activeWorkoutPhases = state.workout.isRunDay 
+      ? buildRunDayPhases(currentTier, weightsSplit, currentMode)
+      : buildNonRunDayPhases(currentTier, currentMode);
+
+    await this.saveState(state);
+    return state;
+  }
+
+  async togglePhasedWorkoutSet(phaseIndex: number, exerciseIndex: number, setIndex: number): Promise<SelfAppState> {
+    const state = await this.loadState();
+    if (!state.activeWorkoutPhases || !state.activeWorkoutPhases[phaseIndex]) return state;
+
+    const phase = state.activeWorkoutPhases[phaseIndex];
+    const exercise = phase.exercises[exerciseIndex];
+    if (!exercise) return state;
+
+    const currentVal = exercise.completedSets[setIndex] || 0;
+    exercise.completedSets[setIndex] = currentVal > 0 ? 0 : 1;
+
+    // Check if phase is complete
+    phase.isCompleted = phase.exercises.every(e => e.completedSets.every(s => s > 0));
+
+    // Check if overall workout is complete
+    const allPhasesComplete = state.activeWorkoutPhases.every(p => p.isCompleted);
+    if (allPhasesComplete) {
+      state.workout.completed = true;
+    }
+
+    await this.saveState(state);
+    return state;
+  }
+
+  async resetPhasedWorkout(): Promise<SelfAppState> {
+    const state = await this.loadState();
+    const tier = state.settings?.trainingWeekTier || 'WEEKS_1_2';
+    const weightsSplit = (state.settings?.weightsVariantPreference === 'WORKOUT_B') ? 'WORKOUT_B' : 'WORKOUT_A';
+    const mode = state.settings?.routineModePreference || 'STANDARD';
+    state.activeWorkoutPhases = state.workout.isRunDay 
+      ? buildRunDayPhases(tier, weightsSplit, mode)
+      : buildNonRunDayPhases(tier, mode);
+    state.workout.completed = false;
     await this.saveState(state);
     return state;
   }
